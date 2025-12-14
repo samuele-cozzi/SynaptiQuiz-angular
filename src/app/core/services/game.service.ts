@@ -117,12 +117,18 @@ export class GameService {
         }
 
         const docRef = doc(this.firestore, 'games', gameId);
-        await updateDoc(docRef, {
+        const updates: any = {
             playerAnswers: updatedAnswers,
             players: updatedPlayers,
             currentTurnPlayerId: nextTurnPlayerId,
-            status,
-            completedAt
-        });
+            status
+        };
+
+        // Only include completedAt if the game is actually completed
+        if (allQuestionsAnswered) {
+            updates.completedAt = new Date();
+        }
+
+        await updateDoc(docRef, updates);
     }
 }
