@@ -1,0 +1,136 @@
+import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
+import { AuthService } from '../../services/auth.service';
+
+@Component({
+    selector: 'app-layout',
+    standalone: true,
+    imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, TranslateModule],
+    template: `
+    <div class="h-screen flex overflow-hidden bg-gray-100 dark:bg-gray-900">
+      
+      <!-- Static sidebar for desktop -->
+      <div class="hidden md:flex md:flex-shrink-0">
+        <div class="flex flex-col w-64">
+          <div class="flex flex-col h-0 flex-1 bg-gray-800">
+            <div class="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+              <div class="flex items-center flex-shrink-0 px-4">
+                 <h1 class="text-white font-bold text-xl">SynaptiQuiz</h1>
+              </div>
+              <nav class="mt-5 flex-1 px-2 space-y-1">
+                <a routerLink="/dashboard" routerLinkActive="bg-gray-900 text-white" 
+                   class="text-gray-300 hover:bg-gray-700 hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                   <!-- Icon Home -->
+                   <svg class="mr-3 flex-shrink-0 h-6 w-6 text-gray-400 group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                   </svg>
+                   {{ 'COMMON.DASHBOARD' | translate }}
+                </a>
+
+                <a routerLink="/games" routerLinkActive="bg-gray-900 text-white" 
+                   class="text-gray-300 hover:bg-gray-700 hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                   <!-- Icon Cube -->
+                   <svg class="mr-3 flex-shrink-0 h-6 w-6 text-gray-400 group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                   </svg>
+                   {{ 'COMMON.GAMES' | translate }}
+                </a>
+
+                @if (authService.currentUser()?.role !== 'player') {
+                    <a routerLink="/questions" routerLinkActive="bg-gray-900 text-white" 
+                       class="text-gray-300 hover:bg-gray-700 hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                       <!-- Icon Question Mark Circle -->
+                       <svg class="mr-3 flex-shrink-0 h-6 w-6 text-gray-400 group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                       </svg>
+                       {{ 'COMMON.QUESTIONS' | translate }}
+                    </a>
+
+                    <a routerLink="/topics" routerLinkActive="bg-gray-900 text-white" 
+                       class="text-gray-300 hover:bg-gray-700 hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                       <!-- Icon Collection -->
+                       <svg class="mr-3 flex-shrink-0 h-6 w-6 text-gray-400 group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                       </svg>
+                       {{ 'COMMON.TOPICS' | translate }}
+                    </a>
+                }
+                
+                @if (authService.currentUser()?.role === 'admin') {
+                     <a routerLink="/players" routerLinkActive="bg-gray-900 text-white" 
+                       class="text-gray-300 hover:bg-gray-700 hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                       <!-- Icon Users -->
+                       <svg class="mr-3 flex-shrink-0 h-6 w-6 text-gray-400 group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                       </svg>
+                       {{ 'COMMON.PLAYERS' | translate }}
+                    </a>
+                }
+                
+                 <a routerLink="/options" routerLinkActive="bg-gray-900 text-white" 
+                   class="text-gray-300 hover:bg-gray-700 hover:text-white group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                   <!-- Icon Cog -->
+                   <svg class="mr-3 flex-shrink-0 h-6 w-6 text-gray-400 group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                   </svg>
+                   {{ 'COMMON.OPTIONS' | translate }}
+                </a>
+
+              </nav>
+            </div>
+            <div class="flex-shrink-0 flex bg-gray-700 p-4">
+              <a href="#" (click)="logout($event)" class="flex-shrink-0 w-full group block">
+                <div class="flex items-center">
+                  <div class="ml-3">
+                    <p class="text-sm font-medium text-white group-hover:text-gray-300">
+                      {{ 'COMMON.LOGOUT' | translate }}
+                    </p>
+                  </div>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Mobile header (simplified) -->
+      <div class="md:hidden flex flex-col w-full">
+            <div class="bg-gray-800 p-4 flex justify-between items-center text-white">
+                <span class="font-bold">SynaptiQuiz</span>
+                <!-- Mobile menu button typically goes here -->
+            </div>
+             <main class="flex-1 relative overflow-y-auto focus:outline-none">
+                <div class="py-6">
+                    <router-outlet></router-outlet>
+                </div>
+            </main>
+             <!-- Bottom Nav for Mobile -->
+             <div class="bg-gray-800 text-white p-2 flex justify-around">
+                 <a routerLink="/dashboard" class="p-2">Dash</a>
+                 <a routerLink="/games" class="p-2">Games</a>
+                 <a routerLink="/options" class="p-2">Opt</a>
+                 <button (click)="logout($event)" class="p-2">Out</button>
+             </div>
+      </div>
+
+      <div class="hidden md:flex flex-col w-0 flex-1 overflow-hidden">
+        <main class="flex-1 relative overflow-y-auto focus:outline-none">
+          <div class="py-6">
+            <router-outlet></router-outlet>
+          </div>
+        </main>
+      </div>
+    </div>
+  `
+})
+export class LayoutComponent {
+    authService = inject(AuthService);
+
+    logout(event: Event) {
+        event.preventDefault();
+        this.authService.logout();
+    }
+}

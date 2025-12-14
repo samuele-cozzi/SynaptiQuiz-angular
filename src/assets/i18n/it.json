@@ -1,0 +1,23 @@
+{
+    "COMMON": {
+        "LOGIN": "Accedi",
+        "LOGOUT": "Esci",
+        "USERNAME": "Nome utente",
+        "GOOGLE_LOGIN": "Accedi con Google",
+        "DASHBOARD": "Dashboard",
+        "GAMES": "Partite",
+        "QUESTIONS": "Domande",
+        "TOPICS": "Argomenti",
+        "PLAYERS": "Giocatori",
+        "OPTIONS": "Opzioni",
+        "SAVE": "Salva",
+        "CANCEL": "Annulla",
+        "DELETE": "Elimina",
+        "EDIT": "Modifica",
+        "CREATE": "Crea",
+        "SEARCH": "Cerca",
+        "FILTER": "Filtra",
+        "THEME": "Tema",
+        "LANGUAGE": "Lingua"
+    }
+}
