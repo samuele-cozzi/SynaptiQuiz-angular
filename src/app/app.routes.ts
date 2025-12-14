@@ -19,6 +19,10 @@ export const routes: Routes = [
                 loadComponent: () => import('./features/topics/topics-list.component').then(m => m.TopicsListComponent)
             },
             {
+                path: 'questions/generate',
+                loadComponent: () => import('./features/questions/question-generator.component').then(m => m.QuestionGeneratorComponent)
+            },
+            {
                 path: 'questions',
                 loadComponent: () => import('./features/questions/questions-list.component').then(m => m.QuestionsListComponent)
             },

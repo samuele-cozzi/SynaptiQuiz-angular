@@ -2,16 +2,17 @@ import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
+import { RouterModule } from '@angular/router';
 import { QuestionService } from '../../core/services/question.service';
 import { TopicService } from '../../core/services/topic.service';
 import { Question, Answer } from '../../core/models/question.model';
 import { Topic } from '../../core/models/topic.model';
 
 @Component({
-    selector: 'app-questions',
-    standalone: true,
-    imports: [CommonModule, FormsModule, TranslateModule],
-    template: `
+  selector: 'app-questions',
+  standalone: true,
+  imports: [CommonModule, FormsModule, TranslateModule, RouterModule],
+  template: `
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div class="sm:flex sm:items-center">
         <div class="sm:flex-auto">
@@ -20,7 +21,10 @@ import { Topic } from '../../core/models/topic.model';
             Manage your quiz questions.
           </p>
         </div>
-        <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+        <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex gap-2">
+          <button routerLink="/questions/generate" type="button" class="inline-flex items-center justify-center rounded-md border border-transparent bg-purple-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 sm:w-auto">
+            Generate with AI
+          </button>
           <button (click)="openModal()" type="button" class="inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:w-auto">
             {{ 'COMMON.CREATE' | translate }}
           </button>
@@ -188,117 +192,117 @@ import { Topic } from '../../core/models/topic.model';
   `
 })
 export class QuestionsListComponent {
-    questionService = inject(QuestionService);
-    topicService = inject(TopicService);
+  questionService = inject(QuestionService);
+  topicService = inject(TopicService);
 
-    questions = signal<Question[]>([]);
-    topics = signal<Topic[]>([]);
+  questions = signal<Question[]>([]);
+  topics = signal<Topic[]>([]);
 
-    filters = {
-        text: '',
-        topicId: '',
-        difficulty: null as number | null,
-        language: ''
+  filters = {
+    text: '',
+    topicId: '',
+    difficulty: null as number | null,
+    language: ''
+  };
+
+  // Modal
+  showModal = false;
+  isEditing = false;
+  currentQuestion: Partial<Question> = this.getEmptyQuestion();
+
+  constructor() {
+    this.topicService.getTopics().subscribe(t => this.topics.set(t));
+    this.questionService.getQuestions().subscribe(q => this.questions.set(q));
+
+    // We check localStorage for default language setting in Options, handled by Translation Service actually.
+    // But maybe we want the default new question to imply current language? 
+    // User requirement: "Options where the user can select... the language of the application, that will be used as default language for games and questions creation"
+    const storedLang = localStorage.getItem('language');
+    if (storedLang === 'en' || storedLang === 'it') {
+      // We will set this when opening modal
+    }
+  }
+
+  getEmptyQuestion(): Partial<Question> {
+    return {
+      text: '',
+      topicId: '',
+      difficulty: 1,
+      language: (localStorage.getItem('language') as 'en' | 'it') || 'en',
+      answers: [
+        { text: '', correct: true, plausibility: 0 },
+        { text: '', correct: false, plausibility: 0 },
+        { text: '', correct: false, plausibility: 0 },
+        { text: '', correct: false, plausibility: 0 }
+      ]
     };
+  }
 
-    // Modal
-    showModal = false;
-    isEditing = false;
-    currentQuestion: Partial<Question> = this.getEmptyQuestion();
+  filteredQuestions() {
+    return this.questions().filter(q => {
+      const matchesText = !this.filters.text || q.text.toLowerCase().includes(this.filters.text.toLowerCase());
+      const matchesTopic = !this.filters.topicId || q.topicId === this.filters.topicId;
+      const matchesDiff = this.filters.difficulty === null || q.difficulty === this.filters.difficulty;
+      const matchesLang = !this.filters.language || q.language === this.filters.language;
+      return matchesText && matchesTopic && matchesDiff && matchesLang;
+    });
+  }
 
-    constructor() {
-        this.topicService.getTopics().subscribe(t => this.topics.set(t));
-        this.questionService.getQuestions().subscribe(q => this.questions.set(q));
+  getTopicName(id: string) {
+    return this.topics().find(t => t.id === id)?.text || 'Unknown';
+  }
 
-        // We check localStorage for default language setting in Options, handled by Translation Service actually.
-        // But maybe we want the default new question to imply current language? 
-        // User requirement: "Options where the user can select... the language of the application, that will be used as default language for games and questions creation"
-        const storedLang = localStorage.getItem('language');
-        if (storedLang === 'en' || storedLang === 'it') {
-            // We will set this when opening modal
-        }
+  openModal(q?: Question) {
+    this.showModal = true;
+    if (q) {
+      this.isEditing = true;
+      // Deep copy answers
+      this.currentQuestion = {
+        ...q,
+        answers: q.answers.map(a => ({ ...a }))
+      };
+    } else {
+      this.isEditing = false;
+      this.currentQuestion = this.getEmptyQuestion();
     }
+  }
 
-    getEmptyQuestion(): Partial<Question> {
-        return {
-            text: '',
-            topicId: '',
-            difficulty: 1,
-            language: (localStorage.getItem('language') as 'en' | 'it') || 'en',
-            answers: [
-                { text: '', correct: true, plausibility: 0 },
-                { text: '', correct: false, plausibility: 0 },
-                { text: '', correct: false, plausibility: 0 },
-                { text: '', correct: false, plausibility: 0 }
-            ]
-        };
-    }
+  closeModal() {
+    this.showModal = false;
+  }
 
-    filteredQuestions() {
-        return this.questions().filter(q => {
-            const matchesText = !this.filters.text || q.text.toLowerCase().includes(this.filters.text.toLowerCase());
-            const matchesTopic = !this.filters.topicId || q.topicId === this.filters.topicId;
-            const matchesDiff = this.filters.difficulty === null || q.difficulty === this.filters.difficulty;
-            const matchesLang = !this.filters.language || q.language === this.filters.language;
-            return matchesText && matchesTopic && matchesDiff && matchesLang;
-        });
+  setCorrectAnswer(index: number) {
+    if (this.currentQuestion.answers) {
+      this.currentQuestion.answers.forEach((a, i) => a.correct = i === index);
     }
+  }
 
-    getTopicName(id: string) {
-        return this.topics().find(t => t.id === id)?.text || 'Unknown';
-    }
+  isValid() {
+    const q = this.currentQuestion;
+    if (!q.text || !q.topicId || !q.difficulty || !q.language) return false;
+    // All answers must have text
+    if (!q.answers || q.answers.some(a => !a.text)) return false;
+    return true;
+  }
 
-    openModal(q?: Question) {
-        this.showModal = true;
-        if (q) {
-            this.isEditing = true;
-            // Deep copy answers
-            this.currentQuestion = {
-                ...q,
-                answers: q.answers.map(a => ({ ...a }))
-            };
-        } else {
-            this.isEditing = false;
-            this.currentQuestion = this.getEmptyQuestion();
-        }
+  async saveQuestion() {
+    if (this.isEditing && this.currentQuestion.id) {
+      await this.questionService.updateQuestion(this.currentQuestion.id, {
+        text: this.currentQuestion.text,
+        topicId: this.currentQuestion.topicId,
+        difficulty: this.currentQuestion.difficulty,
+        language: this.currentQuestion.language,
+        answers: this.currentQuestion.answers
+      });
+    } else {
+      await this.questionService.addQuestion(this.currentQuestion as any);
     }
+    this.closeModal();
+  }
 
-    closeModal() {
-        this.showModal = false;
+  async deleteQuestion(id: string) {
+    if (confirm('Are you sure?')) {
+      await this.questionService.deleteQuestion(id);
     }
-
-    setCorrectAnswer(index: number) {
-        if (this.currentQuestion.answers) {
-            this.currentQuestion.answers.forEach((a, i) => a.correct = i === index);
-        }
-    }
-
-    isValid() {
-        const q = this.currentQuestion;
-        if (!q.text || !q.topicId || !q.difficulty || !q.language) return false;
-        // All answers must have text
-        if (!q.answers || q.answers.some(a => !a.text)) return false;
-        return true;
-    }
-
-    async saveQuestion() {
-        if (this.isEditing && this.currentQuestion.id) {
-            await this.questionService.updateQuestion(this.currentQuestion.id, {
-                text: this.currentQuestion.text,
-                topicId: this.currentQuestion.topicId,
-                difficulty: this.currentQuestion.difficulty,
-                language: this.currentQuestion.language,
-                answers: this.currentQuestion.answers
-            });
-        } else {
-            await this.questionService.addQuestion(this.currentQuestion as any);
-        }
-        this.closeModal();
-    }
-
-    async deleteQuestion(id: string) {
-        if (confirm('Are you sure?')) {
-            await this.questionService.deleteQuestion(id);
-        }
-    }
+  }
 }
