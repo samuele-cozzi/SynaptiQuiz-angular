@@ -156,6 +156,7 @@ export class GamesListComponent {
     }
 
     play(id: string) {
+        this.gameService.updateGame(id, { status: 'in_progress' });
         this.router.navigate(['/games', id]);
     }
 

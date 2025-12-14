@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { Auth, GoogleAuthProvider, signInWithPopup, signInAnonymously, user, User, updateProfile } from '@angular/fire/auth';
-import { Firestore, doc, setDoc, getDoc, updateDoc } from '@angular/fire/firestore';
+import { Auth, GoogleAuthProvider, signInWithPopup, signInAnonymously, user, User, updateProfile, signInWithEmailAndPassword } from '@angular/fire/auth';
+import { Firestore, doc, setDoc, getDoc, updateDoc, query, where, getDocs, collection } from '@angular/fire/firestore';
 import { Router } from '@angular/router';
 import { Player, PlayerRole } from '../models/player.model';
 import { from, Observable, of, switchMap } from 'rxjs'; // Import from 'rxjs'
@@ -12,6 +12,7 @@ export class AuthService {
     private auth = inject(Auth);
     private firestore = inject(Firestore);
     private router = inject(Router);
+    private playersCollection = collection(this.firestore, 'players');
 
     user$ = user(this.auth);
     currentUser = signal<Player | null>(null);
@@ -43,25 +44,10 @@ export class AuthService {
     }
 
     async loginWithUsername(username: string) {
-        // For username login without password, we use anonymous auth + user profile update
-        // NOTE: This is a simplified approach as requested. Real-world would need more secure handling or custom auth tokens.
-        // Since "Login can be performed only with the username (without password)", we treat this as a semi-anonymous session
-        // keyed by the username if we wanted persistence, but Firebase Anonymous is truly unique per session unless linked.
-        // However, the requirement says "Every login will create a new player, if the player doesn't exist (case insensitive)".
-        // This implies we need to find if a player with that username exists.
-        // WITHOUT password, anyone can claim a username. This is insecure but matches requirements.
-        // To "re-login" as that user without password in Firebase is tricky.
-        // standard approach for "username only" is usually just a local tracking or insecure implementation.
-
-        // improved approach for this specific requirement:
-        // 1. SignInAnonymously
-        // 2. Update profile with displayName = username
-        // 3. Check firestore for this username to "link" or "create"
 
         const credential = await signInAnonymously(this.auth);
         if (credential.user) {
             await updateProfile(credential.user, { displayName: username });
-            // Force re-fetch logic
             const player = await this.getOrCreatePlayer(credential.user, username);
             this.currentUser.set(player);
             this.router.navigate(['/dashboard']);
@@ -75,14 +61,26 @@ export class AuthService {
     }
 
     private async getOrCreatePlayer(firebaseUser: User, overrideUsername?: string): Promise<Player> {
-        const userDocRef = doc(this.firestore, 'players', firebaseUser.uid);
-        const userSnapshot = await getDoc(userDocRef);
 
-        if (userSnapshot.exists()) {
-            const data = userSnapshot.data() as any;
-            // Update last login
-            await updateDoc(userDocRef, { lastLogin: new Date() });
-            return { ...data, lastLogin: new Date() } as Player;
+        const username = overrideUsername || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Anonymous';
+
+        const userDocRef = doc(this.firestore, 'players', firebaseUser.uid);
+        // const userSnapshot = await getDoc(userDocRef);
+
+        const q = query(this.playersCollection, where('username', '==', username));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            const doc = querySnapshot.docs[0];
+            return doc.data() as Player;
+
+            // if (userSnapshot.exists()) {
+            //     const data = userSnapshot.data() as any;
+
+            //     const updates: any = { lastLogin: new Date() };
+
+            //     await updateDoc(userDocRef, updates);
+            //     return { ...data, ...updates } as Player;
+
         } else {
             // Create new player
 
@@ -97,8 +95,6 @@ export class AuthService {
             const role: PlayerRole = 'player';
             // NOTE: To implement "First player is admin", we would need to count documents in 'players'.
             // Leaving as 'player' for efficiency unless asked to verify count strictly.
-
-            const username = overrideUsername || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Anonymous';
 
             // Check if username already exists in other documents? 
             // The requirement says "Every login will create a new player, if the player doesn't exist (case insensitive)"
