@@ -111,6 +111,8 @@ export class AuthService {
                 photoURL: firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${username}&background=random`,
                 role: role,
                 gamesWon: 0,
+                gamesPlayed: 0,
+                totalPoints: 0,
                 ...(firebaseUser.email ? { email: firebaseUser.email } : {}),
                 createdAt: new Date(),
                 lastLogin: new Date()

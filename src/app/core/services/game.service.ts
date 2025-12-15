@@ -5,6 +5,7 @@ import { Game, GamePlayer, PlayerAnswer } from '../models/game.model';
 import { Player } from '../models/player.model';
 import { Question } from '../models/question.model';
 import { AuthService } from './auth.service';
+import { PlayerService } from './player.service';
 
 @Injectable({
     providedIn: 'root'
@@ -12,6 +13,7 @@ import { AuthService } from './auth.service';
 export class GameService {
     private firestore = inject(Firestore);
     private authService = inject(AuthService);
+    private playerService = inject(PlayerService);
     private gamesCollection = collection(this.firestore, 'games');
 
     getGames(): Observable<Game[]> {
@@ -109,11 +111,35 @@ export class GameService {
         const status = allQuestionsAnswered ? 'completed' : 'in_progress';
         const completedAt = allQuestionsAnswered ? new Date() : undefined;
 
-        // If completed, update wins
+        // If completed, update player statistics
         if (allQuestionsAnswered) {
-            // Determine winner and update players stats
-            // We do this in component or cloud function ideally. Here involves updating other docs.
-            // Let's postpone stats update to keep service clean or do it separately.
+            // Determine winner(s) - player(s) with highest score
+            const maxScore = Math.max(...updatedPlayers.map(p => p.score));
+            const winners = updatedPlayers.filter(p => p.score === maxScore);
+
+            // Update each player's statistics
+            for (const gamePlayer of updatedPlayers) {
+                try {
+                    // Fetch current player data from Firestore
+                    const playerDocRef = doc(this.firestore, 'players', gamePlayer.uid);
+                    const playerSnap = await getDoc(playerDocRef);
+
+                    if (playerSnap.exists()) {
+                        const currentPlayerData = playerSnap.data() as Player;
+                        const isWinner = winners.some(w => w.uid === gamePlayer.uid);
+
+                        // Update player statistics
+                        await this.playerService.updatePlayer(gamePlayer.uid, {
+                            gamesPlayed: (currentPlayerData.gamesPlayed || 0) + 1,
+                            totalPoints: (currentPlayerData.totalPoints || 0) + gamePlayer.score,
+                            gamesWon: isWinner ? (currentPlayerData.gamesWon || 0) + 1 : currentPlayerData.gamesWon
+                        });
+                    }
+                } catch (error) {
+                    console.error(`Failed to update stats for player ${gamePlayer.uid}:`, error);
+                    // Continue updating other players even if one fails
+                }
+            }
         }
 
         const docRef = doc(this.firestore, 'games', gameId);

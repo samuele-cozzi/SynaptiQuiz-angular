@@ -7,7 +7,7 @@ import { Question } from '../models/question.model';
 })
 export class AiService {
     // TODO: Replace with your actual API key
-    private readonly checkEnv = (window as any).GEMINI_API_KEY || 'AIzaSyBoz4aqY7j5Ct3AH6J2InUvYnhcDwzwPKk';
+    private readonly checkEnv = (window as any).GEMINI_API_KEY || 'AIzaSyBXYwSjuVmcikIclj0nt2ahJu8qpHAMlYc';
     private genAI: GoogleGenerativeAI;
 
     constructor() {

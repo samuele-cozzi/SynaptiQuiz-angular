@@ -1,19 +1,20 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import {
   Firestore,
   doc,
-  getDoc,
+  docData,
   collection,
   query,
   orderBy,
   limit,
-  getDocs,
+  collectionData,
 } from '@angular/fire/firestore';
 import { Game } from '../../core/models/game.model';
 import { Player } from '../../core/models/player.model';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-leaderboard',
@@ -25,16 +26,16 @@ import { Player } from '../../core/models/player.model';
         {{ isGameSpecific ? 'Game Leaderboard' : 'Global Leaderboard' }}
       </h1>
 
-      @if (isGameSpecific && gameData) {
+      @if (isGameSpecific && gameData()) {
       <div class="mb-8">
-        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ gameData.name }}</h2>
-        <p class="text-gray-500">Finished at: {{ gameData.completedAt | date : 'medium' }}</p>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ gameData()!.name }}</h2>
+        <p class="text-gray-500">Finished at: {{ toDate(gameData()!.completedAt) | date : 'medium' }}</p>
       </div>
 
       <div class="bg-white dark:bg-gray-800 shadow scale-100 p-6 rounded-lg mb-8">
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Results</h3>
         <ul class="divide-y divide-gray-200 dark:divide-gray-700">
-          @for (p of gamePlayers; track p.uid) {
+          @for (p of gamePlayers(); track p.uid) {
           <li class="py-4 flex items-center justify-between">
             <div class="flex items-center">
               <span class="text-2xl font-bold text-gray-400 mr-4">#{{ $index + 1 }}</span>
@@ -55,7 +56,7 @@ import { Player } from '../../core/models/player.model';
       <div class="bg-white dark:bg-gray-800 shadow p-6 rounded-lg">
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Questions Review</h3>
         <ul class="divide-y divide-gray-200 dark:divide-gray-700">
-          @for (ans of gameData.playerAnswers; track $index) {
+          @for (ans of gameData()!.playerAnswers; track $index) {
           <li class="py-4">
             <p class="text-sm font-medium text-gray-900 dark:text-white mb-1">
               Q: {{ getQuestionText(ans.questionId) }}
@@ -79,6 +80,10 @@ import { Player } from '../../core/models/player.model';
         </ul>
       </div>
 
+      } @else if (isGameSpecific && !gameData()) {
+        <div class="text-center py-8">
+          <p class="text-gray-500">Loading game data...</p>
+        </div>
       } @else {
       <!-- Global Leaderboard -->
       <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
@@ -101,12 +106,24 @@ import { Player } from '../../core/models/player.model';
                 scope="col"
                 class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
+                Games Played
+              </th>
+              <th
+                scope="col"
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
                 Games Won
+              </th>
+              <th
+                scope="col"
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Total Points
               </th>
             </tr>
           </thead>
           <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            @for (p of globalPlayers; track p.uid) {
+            @for (p of globalPlayers(); track p.uid) {
             <tr>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">#{{ $index + 1 }}</td>
               <td class="px-6 py-4 whitespace-nowrap">
@@ -121,7 +138,9 @@ import { Player } from '../../core/models/player.model';
                   </div>
                 </div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ p.gamesWon }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ p.gamesPlayed || 0 }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-indigo-600 dark:text-indigo-400">{{ p.gamesWon || 0 }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ p.totalPoints || 0 }}</td>
             </tr>
             }
           </tbody>
@@ -131,60 +150,80 @@ import { Player } from '../../core/models/player.model';
     </div>
   `,
 })
-export class LeaderboardComponent implements OnInit {
+export class LeaderboardComponent implements OnInit, OnDestroy {
   route = inject(ActivatedRoute);
   firestore = inject(Firestore);
 
   isGameSpecific = false;
-  gameData: Game | null = null;
-  gamePlayers: any[] = []; // Sorted by score
+  gameData = signal<Game | null>(null);
+  gamePlayers = signal<any[]>([]); // Sorted by score
 
-  globalPlayers: Player[] = [];
+  globalPlayers = signal<Player[]>([]);
 
-  constructor() {}
+  private gameSub?: Subscription;
+  private playersSub?: Subscription;
 
-  async ngOnInit() {
+  ngOnInit() {
     const gameId = this.route.snapshot.queryParamMap.get('gameId');
     if (gameId) {
       this.isGameSpecific = true;
-      await this.loadGameData(gameId);
+      this.loadGameData(gameId);
     } else {
       this.isGameSpecific = false;
-      await this.loadGlobalData();
+      this.loadGlobalData();
     }
   }
 
-  async loadGameData(id: string) {
+  ngOnDestroy() {
+    this.gameSub?.unsubscribe();
+    this.playersSub?.unsubscribe();
+  }
+
+  loadGameData(id: string) {
     const docRef = doc(this.firestore, 'games', id);
-    const snap = await getDoc(docRef);
-    if (snap.exists()) {
-      this.gameData = snap.data() as Game;
-      // Sort players by score
-      this.gamePlayers = [...this.gameData.players].sort((a, b) => b.score - a.score);
-    }
+    // Use docData for real-time updates
+    this.gameSub = docData(docRef, { idField: 'id' }).subscribe((data) => {
+      if (data) {
+        const game = data as Game;
+        this.gameData.set(game);
+        // Sort players by score whenever game data updates
+        this.gamePlayers.set([...game.players].sort((a, b) => b.score - a.score));
+      }
+    });
   }
 
-  async loadGlobalData() {
+  loadGlobalData() {
     const colRef = collection(this.firestore, 'players');
-    // Query "game wins against other players"?
-    // Prompt says "Who guess more answers win the game".
-    // "Player entity has: ... game wins".
-    // We sort by game wins.
     const q = query(colRef, orderBy('gamesWon', 'desc'), limit(50));
-    const snap = await getDocs(q);
-    this.globalPlayers = snap.docs.map((d) => d.data() as Player);
+    // Use collectionData for real-time updates
+    this.playersSub = collectionData(q, { idField: 'uid' }).subscribe((players) => {
+      this.globalPlayers.set(players as Player[]);
+    });
   }
 
   getQuestionText(id: string) {
-    return this.gameData?.questions.find((q) => q.id === id)?.text || 'Unknown';
+    return this.gameData()?.questions.find((q) => q.id === id)?.text || 'Unknown';
   }
 
   getPlayerName(uid: string) {
-    return this.gameData?.players.find((p) => p.uid === uid)?.username || 'Unknown';
+    return this.gameData()?.players.find((p) => p.uid === uid)?.username || 'Unknown';
   }
 
   getCorrectAnswerText(id: string) {
-    const q = this.gameData?.questions.find((q) => q.id === id);
+    const q = this.gameData()?.questions.find((q) => q.id === id);
     return q?.answers.find((a) => a.correct)?.text || 'Unknown';
+  }
+
+  toDate(timestamp: any): Date {
+    // Handle Firestore Timestamp objects
+    if (timestamp && typeof timestamp.toDate === 'function') {
+      return timestamp.toDate();
+    }
+    // Handle already converted Date objects
+    if (timestamp instanceof Date) {
+      return timestamp;
+    }
+    // Fallback to current date
+    return new Date();
   }
 }
