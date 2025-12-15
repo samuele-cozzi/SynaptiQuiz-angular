@@ -24,7 +24,7 @@ interface GroupedQuestion {
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       @if (game(); as g) {
         
-        <!-- Header -->
+        <!-- Header with Topic Background Image -->
         <div class="md:flex md:items-center md:justify-between mb-6">
            <div>
               <h2 class="text-2xl font-bold leading-7 text-gray-900 dark:text-white sm:text-3xl sm:truncate">
@@ -39,6 +39,9 @@ interface GroupedQuestion {
                </button>
            }
         </div>
+
+        <!-- Main Content -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         @if (g.status !== 'completed') {
            <!-- Turn Indicator -->
@@ -91,13 +94,13 @@ interface GroupedQuestion {
            @if (selectedQuestionId() && (isMyTurn(g) || isAdmin())) {
               @if (currentQuestion(); as q) {
                 <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden">
-                   <div class="px-4 py-5 sm:px-6">
-                       <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                   <div class="relative h-64 sm:h-80 overflow-hidden" [style.backgroundImage]="'url(' + getTopicImageUrl(q.topicId) + ')'" [style.backgroundSize]="'cover'" [style.backgroundPosition]="'center'">
+                       <!-- <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
                            Question {{ g.playerAnswers.length + 1 }}
                        </h3>
                        <p class="mt-1 max-w-2xl text-sm text-gray-500">
-                           Difficulty: {{ q.difficulty }} | Topic: {{ getTopicName(q.topicId) }}
-                       </p>
+                           Difficulty: {{ q.difficulty }}
+                       </p> -->
                    </div>
                    <div class="border-t border-gray-200 dark:border-gray-700 px-4 py-5 sm:p-6">
                        <p class="text-xl text-gray-900 dark:text-white mb-6 font-semibold">{{ q.text }}</p>
@@ -122,6 +125,23 @@ interface GroupedQuestion {
               }
            }
 
+           <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+            @for (p of g.players; track p.uid) {
+            <li class="py-4 flex items-center justify-between">
+                <div class="flex items-center">
+                <span class="text-2xl font-bold text-gray-400 mr-4">#{{ $index + 1 }}</span>
+                <img class="h-10 w-10 rounded-full" [src]="p.photoURL" alt="" />
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ p.username }}</p>
+                </div>
+                </div>
+                <div class="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                {{ p.score }} pts
+                </div>
+            </li>
+            }
+            </ul>
+
         } @else {
             <div class="text-center py-12">
                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -135,6 +155,7 @@ interface GroupedQuestion {
                 </div>
             </div>
         }
+        </div>
       } @else {
           <div class="text-center p-8">Loading Game...</div>
       }
@@ -151,6 +172,7 @@ export class GamePlayComponent implements OnInit, OnDestroy {
 
     game = signal<Game | null>(null);
     topics = signal<Topic[]>([]);
+    gamePlayers = signal<any[]>([]);
     gameSub?: Subscription;
     topicsSub?: Subscription;
 
@@ -273,6 +295,11 @@ export class GamePlayComponent implements OnInit, OnDestroy {
 
     getTopicName(topicId: string) {
         return this.topics().find(t => t.id === topicId)?.text || topicId;
+    }
+
+    getTopicImageUrl(topicId: string): string {
+        const topic = this.topics().find(t => t.id === topicId);
+        return topic?.imageUrl || 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%23cccccc%22%2F%3E%3C%2Fsvg%3E';
     }
 
     isMyTurn(g: Game) {
