@@ -121,6 +121,7 @@ export class GameService {
             playerAnswers: updatedAnswers,
             players: updatedPlayers,
             currentTurnPlayerId: nextTurnPlayerId,
+            currentSelectedQuestionId: null, // Clear selection after answer
             status
         };
 

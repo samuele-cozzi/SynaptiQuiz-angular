@@ -29,6 +29,7 @@ export interface Game {
     // State
     currentQuestionIndex: number;
     currentTurnPlayerId: string; // ID of player whose turn it is
+    currentSelectedQuestionId?: string | null; // ID of question currently selected by current player
     playerAnswers: PlayerAnswer[]; // History of answers
 
     createdAt: Date;

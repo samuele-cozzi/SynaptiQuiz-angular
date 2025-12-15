@@ -1,13 +1,20 @@
-import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { Firestore, doc, docData } from '@angular/fire/firestore';
 import { GameService } from '../../core/services/game.service';
 import { AuthService } from '../../core/services/auth.service';
+import { TopicService } from '../../core/services/topic.service';
 import { Game, GamePlayer, PlayerAnswer } from '../../core/models/game.model';
 import { Question } from '../../core/models/question.model';
+import { Topic } from '../../core/models/topic.model';
 import { Subscription, interval, takeWhile } from 'rxjs';
+
+interface GroupedQuestion {
+    question: Question;
+    topicName: string;
+}
 
 @Component({
     selector: 'app-game-play',
@@ -38,7 +45,6 @@ import { Subscription, interval, takeWhile } from 'rxjs';
            <div class="bg-indigo-50 dark:bg-indigo-900 border-l-4 border-indigo-400 p-4 mb-6">
               <div class="flex">
                 <div class="flex-shrink-0">
-                  <!-- Info Icon -->
                   <svg class="h-5 w-5 text-indigo-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
                   </svg>
@@ -52,37 +58,68 @@ import { Subscription, interval, takeWhile } from 'rxjs';
               </div>
            </div>
 
-           <!-- Question Area -->
-           @if (currentQuestion(); as q) {
-             <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden">
-                <div class="px-4 py-5 sm:px-6">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-                        Question {{ g.playerAnswers.length + 1 }}
-                    </h3>
-                    <p class="mt-1 max-w-2xl text-sm text-gray-500">
-                        Difficulty: {{ q.difficulty }} | Topic: {{ q.topicId }}
-                    </p>
-                </div>
-                <div class="border-t border-gray-200 dark:border-gray-700 px-4 py-5 sm:p-6">
-                    <p class="text-xl text-gray-900 dark:text-white mb-6 font-semibold">{{ q.text }}</p>
-                    
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        @for (ans of q.answers; track $index) {
-                            <button (click)="submitAnswer(g, q.id, $index)" 
-                                    [disabled]="!isMyTurn(g)"
-                                    class="relative block w-full border rounded-lg p-4 text-left hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:hover:border-indigo-400 dark:bg-gray-700"
-                                    [class.opacity-50]="!isMyTurn(g)"
-                                    [class.cursor-not-allowed]="!isMyTurn(g)">
-                                <span class="font-medium text-gray-900 dark:text-white">{{ ans.text }}</span>
-                            </button>
-                        }
+           <!-- Question Selection Mode -->
+           @if (!selectedQuestionId()) {
+              <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-6">
+                 <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Select a Question</h3>
+                 
+                 @for (group of groupedQuestions(); track group.topicName) {
+                    <div class="mb-6">
+                       <h4 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-3">{{ group.topicName }}</h4>
+                       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                          @for (item of group.questions; track item.question.id) {
+                             <button 
+                                (click)="selectQuestion(item.question.id)"
+                                [disabled]="!isMyTurn(g) && !isAdmin()"
+                                class="relative block border-2 border-gray-300 dark:border-gray-600 rounded-lg p-4 hover:border-indigo-500 dark:hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                                [class.opacity-50]="!isMyTurn(g) && !isAdmin()"
+                                [class.cursor-not-allowed]="!isMyTurn(g) && !isAdmin()">
+                                <div class="text-center">
+                                   <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Difficulty</div>
+                                   <div class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ item.question.difficulty }}</div>
+                                   <div class="text-xs text-gray-600 dark:text-gray-300 mt-2">{{ item.topicName }}</div>
+                                </div>
+                             </button>
+                          }
+                       </div>
                     </div>
+                 }
+              </div>
+           }
+
+           <!-- Question Answer Mode -->
+           @if (selectedQuestionId() && (isMyTurn(g) || isAdmin())) {
+              @if (currentQuestion(); as q) {
+                <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden">
+                   <div class="px-4 py-5 sm:px-6">
+                       <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                           Question {{ g.playerAnswers.length + 1 }}
+                       </h3>
+                       <p class="mt-1 max-w-2xl text-sm text-gray-500">
+                           Difficulty: {{ q.difficulty }} | Topic: {{ getTopicName(q.topicId) }}
+                       </p>
+                   </div>
+                   <div class="border-t border-gray-200 dark:border-gray-700 px-4 py-5 sm:p-6">
+                       <p class="text-xl text-gray-900 dark:text-white mb-6 font-semibold">{{ q.text }}</p>
+                       
+                       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                           @for (ans of q.answers; track $index) {
+                               <button (click)="submitAnswer(g, q.id, $index)" 
+                                       [disabled]="!isMyTurn(g)"
+                                       class="relative block w-full border rounded-lg p-4 text-left hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:hover:border-indigo-400 dark:bg-gray-700"
+                                       [class.opacity-50]="!isMyTurn(g)"
+                                       [class.cursor-not-allowed]="!isMyTurn(g)">
+                                   <span class="font-medium text-gray-900 dark:text-white">{{ ans.text }}</span>
+                               </button>
+                           }
+                       </div>
+                   </div>
                 </div>
-             </div>
-           } @else {
-               <div class="text-center py-10">
-                   <p class="text-gray-500">Loading next question...</p>
-               </div>
+              } @else {
+                  <div class="text-center py-10">
+                      <p class="text-gray-500">Loading question...</p>
+                  </div>
+              }
            }
 
         } @else {
@@ -109,17 +146,54 @@ export class GamePlayComponent implements OnInit, OnDestroy {
     router = inject(Router);
     gameService = inject(GameService);
     authService = inject(AuthService);
+    topicService = inject(TopicService);
     firestore = inject(Firestore);
 
     game = signal<Game | null>(null);
+    topics = signal<Topic[]>([]);
     gameSub?: Subscription;
+    topicsSub?: Subscription;
 
-    // We need to determine "Current Question".
-    // Logic: The game has a list of questions. 'playerAnswers' tracks which are answered.
-    // The prompt says "questions with player answers".
-    // Simplest: Find first question ID not in playerAnswers.
-    // Or better: Use currentQuestionIndex if we maintained it properly. But index in array is easier.
+    selectedQuestionId = signal<string | null>(null);
     currentQuestion = signal<Question | null>(null);
+
+    isAdmin = computed(() => this.authService.currentUser()?.role === 'admin');
+
+    // Compute available questions (not yet answered)
+    availableQuestions = computed(() => {
+        const g = this.game();
+        if (!g) return [];
+
+        const answeredIds = g.playerAnswers.map(a => a.questionId);
+        return g.questions.filter(q => !answeredIds.includes(q.id));
+    });
+
+    // Group questions by topic and sort by difficulty
+    groupedQuestions = computed(() => {
+        const available = this.availableQuestions();
+        const topicsList = this.topics();
+
+        // Group by topicId
+        const groups = new Map<string, GroupedQuestion[]>();
+
+        available.forEach(q => {
+            const topic = topicsList.find(t => t.id === q.topicId);
+            const topicName = topic?.text || q.topicId;
+
+            if (!groups.has(q.topicId)) {
+                groups.set(q.topicId, []);
+            }
+
+            groups.get(q.topicId)!.push({ question: q, topicName });
+        });
+
+        // Sort each group by difficulty and convert to array
+        return Array.from(groups.entries()).map(([topicId, questions]) => ({
+            topicId,
+            topicName: questions[0].topicName,
+            questions: questions.sort((a, b) => a.question.difficulty - b.question.difficulty)
+        }));
+    });
 
     ngOnInit() {
         const gameId = this.route.snapshot.paramMap.get('id');
@@ -128,48 +202,77 @@ export class GamePlayComponent implements OnInit, OnDestroy {
             this.gameSub = docData(docRef, { idField: 'id' }).subscribe((g: any) => {
                 if (g) {
                     this.game.set(g as Game);
+
+                    // Sync selected question from game state (so admin can see what current player selected)
+                    if (g.currentSelectedQuestionId && g.currentSelectedQuestionId !== this.selectedQuestionId()) {
+                        this.selectedQuestionId.set(g.currentSelectedQuestionId);
+                    }
+
                     this.updateCurrentQuestion(g as Game);
                 }
             });
         }
+
+        // Load topics for display names
+        this.topicsSub = this.topicService.getTopics().subscribe(topics => {
+            this.topics.set(topics);
+        });
     }
+
 
     ngOnDestroy() {
         this.gameSub?.unsubscribe();
+        this.topicsSub?.unsubscribe();
     }
 
-    updateCurrentQuestion(g: Game) {
+    async selectQuestion(questionId: string) {
+        const g = this.game();
+        if (!g) return;
+
+        // Update local state
+        this.selectedQuestionId.set(questionId);
+        const question = g.questions.find(q => q.id === questionId);
+        this.currentQuestion.set(question || null);
+
+        // Save to Firestore so other players (especially admin) can see the selection
+        if (this.isMyTurn(g)) {
+            await this.gameService.updateGame(g.id, {
+                currentSelectedQuestionId: questionId
+            });
+        }
+    }
+
+
+
+    async updateCurrentQuestion(g: Game) {
         if (g.status === 'completed') {
             this.currentQuestion.set(null);
+            this.selectedQuestionId.set(null);
+            if (this.isMyTurn(g)) {
+                await this.gameService.updateGame(g.id, {
+                    currentSelectedQuestionId: null
+                });
+            }
             return;
         }
 
-        // The prompt said "questions should be divisible by players".
-        // And "players take turns choosing a question". 
-        // If we implement "choose", we need a UI to Pick Question.
-        // But my previous implementation in GameService assumed `currentQuestionIndex` approach (Linear).
-        // "choosing a question" is slightly ambiguous. Does it mean "Answering a question"?
-        // Usually quiz games are linear.
-        // If "choosing a question" means picking from a category (like Jeopardy), that's different.
-        // Given "Validation rule are The number of questions should be divisible by the number of player", 
-        // it strongly implies a round-robin answering.
-        // I will stick to Linear for now as it's safer for "Progressive Web App" MVP unless explicitly "Jeopardy style".
-        // Wait, "The user can filter... questions... The validation rule...".
-        // If "Choosing a question" means picking topic/difficulty DURING game, that contradicts "Game Creation" step where we select questions.
-        // So "Choosing a question" likely just means "Navigating to the question assigned to them".
-        // Let's stick to Linear: Questions are ordered in `g.questions`.
-
-        // Calculate which question is next
-        const answeredCount = g.playerAnswers.length;
-        if (answeredCount < g.questions.length) {
-            this.currentQuestion.set(g.questions[answeredCount]);
+        // If a question is selected, show it
+        if (this.selectedQuestionId()) {
+            const question = g.questions.find(q => q.id === this.selectedQuestionId());
+            this.currentQuestion.set(question || null);
         } else {
-            this.currentQuestion.set(null);
+            // For non-current-player, show the first available question
+            const available = this.availableQuestions();
+            this.currentQuestion.set(available[0] || null);
         }
     }
 
     getPlayerName(uid: string) {
         return this.game()?.players.find(p => p.uid === uid)?.username || 'Unknown';
+    }
+
+    getTopicName(topicId: string) {
+        return this.topics().find(t => t.id === topicId)?.text || topicId;
     }
 
     isMyTurn(g: Game) {
@@ -180,15 +283,19 @@ export class GamePlayComponent implements OnInit, OnDestroy {
         if (!this.isMyTurn(g)) return;
         try {
             await this.gameService.submitAnswer(g.id, g, qId, aIndex);
+            // Reset selection after answering
+            this.selectedQuestionId.set(null);
+            if (this.isMyTurn(g)) {
+                await this.gameService.updateGame(g.id, {
+                    currentSelectedQuestionId: null
+                });
+            }
         } catch (e) {
-            alert(e); // Simple error handling
+            alert(e);
         }
     }
 
     viewLeaderboard() {
-        // Navigate to leaderboard with filters
-        // "The leaderboard page has 2 flawor, one global with point of every game, and one filtered for the game."
-        // So we can pass query param ?gameId=...
         this.router.navigate(['/leaderboard'], { queryParams: { gameId: this.game()?.id } });
     }
 }
