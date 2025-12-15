@@ -9,10 +9,10 @@ import { Topic } from '../../core/models/topic.model';
 import { Router } from '@angular/router';
 
 @Component({
-    selector: 'app-question-generator',
-    standalone: true,
-    imports: [CommonModule, FormsModule],
-    template: `
+  selector: 'app-question-generator',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
     <div class="p-6">
       <h1 class="text-2xl font-bold mb-6 text-white">Generate Questions with AI</h1>
       
@@ -52,6 +52,18 @@ import { Router } from '@angular/router';
             <label class="block text-sm font-medium mb-2">Count per Difficulty</label>
             <input type="number" [(ngModel)]="count" min="1" max="10" class="w-full p-2 rounded bg-gray-700 border-gray-600 focus:border-blue-500 text-white">
           </div>
+
+          <!-- Target Audience -->
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium mb-2">Target Audience (Optional)</label>
+            <input 
+              type="text" 
+              [(ngModel)]="targetAudience" 
+              placeholder="e.g., kids age 6-10, experts, beginners, teenagers..."
+              class="w-full p-2 rounded bg-gray-700 border-gray-600 focus:border-blue-500 text-white placeholder-gray-400"
+            >
+            <p class="text-xs text-gray-400 mt-1">Specify who will play to get more appropriate questions</p>
+          </div>
         </div>
 
         <button (click)="generate()" [disabled]="loading() || !selectedTopicId" 
@@ -90,80 +102,82 @@ import { Router } from '@angular/router';
   `
 })
 export class QuestionGeneratorComponent {
-    private aiService = inject(AiService);
-    private questionService = inject(QuestionService);
-    private topicService = inject(TopicService);
-    private router = inject(Router);
+  private aiService = inject(AiService);
+  private questionService = inject(QuestionService);
+  private topicService = inject(TopicService);
+  private router = inject(Router);
 
-    topics = signal<Topic[]>([]);
-    selectedTopicId = '';
-    language: 'en' | 'it' = 'en';
-    selectedDifficulties: number[] = [1];
-    count = 2;
+  topics = signal<Topic[]>([]);
+  selectedTopicId = '';
+  language: 'en' | 'it' = 'en';
+  selectedDifficulties: number[] = [1];
+  count = 2;
+  targetAudience = '';
 
-    loading = signal(false);
-    saving = signal(false);
-    generatedQuestions = signal<Partial<Question>[]>([]);
+  loading = signal(false);
+  saving = signal(false);
+  generatedQuestions = signal<Partial<Question>[]>([]);
 
-    constructor() {
-        this.topicService.getTopics().subscribe(t => {
-            this.topics.set(t);
+  constructor() {
+    this.topicService.getTopics().subscribe(t => {
+      this.topics.set(t);
+    });
+  }
+
+  toggleDifficulty(d: number) {
+    if (this.selectedDifficulties.includes(d)) {
+      this.selectedDifficulties = this.selectedDifficulties.filter(x => x !== d);
+    } else {
+      this.selectedDifficulties.push(d);
+    }
+  }
+
+  async generate() {
+    if (!this.selectedTopicId || this.selectedDifficulties.length === 0) return;
+
+    const selectedTopic = this.topics().find(t => t.id === this.selectedTopicId);
+    if (!selectedTopic) return;
+
+    this.loading.set(true);
+    try {
+      const questions = await this.aiService.generateQuestions(
+        selectedTopic.text,
+        this.language,
+        this.selectedDifficulties,
+        this.count,
+        this.targetAudience
+      );
+      this.generatedQuestions.set(questions);
+    } catch (error) {
+      alert('Failed to generate questions. Check console/API key.');
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async saveAll() {
+    this.saving.set(true);
+    try {
+      for (const q of this.generatedQuestions()) {
+        await this.questionService.addQuestion({
+          text: q.text!,
+          topicId: this.selectedTopicId,
+          difficulty: q.difficulty!,
+          language: q.language!,
+          answers: q.answers!
         });
+      }
+      alert('Questions saved successfully!');
+      this.router.navigate(['/questions']); // Redirect to questions list properly
+      // Note: route in app.routes is 'questions', not 'dashboard/questions' based on previous context, but user has layout so path might be relative. 
+      // The routerLink in sidebar works, so '/questions' or '/dashboard/questions' depending on route structure.
+      // app.routes.ts shows 'questions' is a child of '', same level as 'dashboard'.
+      // So '/questions' is correct.
+    } catch (error) {
+      console.error(error);
+      alert('Error saving questions');
+    } finally {
+      this.saving.set(false);
     }
-
-    toggleDifficulty(d: number) {
-        if (this.selectedDifficulties.includes(d)) {
-            this.selectedDifficulties = this.selectedDifficulties.filter(x => x !== d);
-        } else {
-            this.selectedDifficulties.push(d);
-        }
-    }
-
-    async generate() {
-        if (!this.selectedTopicId || this.selectedDifficulties.length === 0) return;
-
-        const selectedTopic = this.topics().find(t => t.id === this.selectedTopicId);
-        if (!selectedTopic) return;
-
-        this.loading.set(true);
-        try {
-            const questions = await this.aiService.generateQuestions(
-                selectedTopic.text,
-                this.language,
-                this.selectedDifficulties,
-                this.count
-            );
-            this.generatedQuestions.set(questions);
-        } catch (error) {
-            alert('Failed to generate questions. Check console/API key.');
-        } finally {
-            this.loading.set(false);
-        }
-    }
-
-    async saveAll() {
-        this.saving.set(true);
-        try {
-            for (const q of this.generatedQuestions()) {
-                await this.questionService.addQuestion({
-                    text: q.text!,
-                    topicId: this.selectedTopicId,
-                    difficulty: q.difficulty!,
-                    language: q.language!,
-                    answers: q.answers!
-                });
-            }
-            alert('Questions saved successfully!');
-            this.router.navigate(['/questions']); // Redirect to questions list properly
-            // Note: route in app.routes is 'questions', not 'dashboard/questions' based on previous context, but user has layout so path might be relative. 
-            // The routerLink in sidebar works, so '/questions' or '/dashboard/questions' depending on route structure.
-            // app.routes.ts shows 'questions' is a child of '', same level as 'dashboard'.
-            // So '/questions' is correct.
-        } catch (error) {
-            console.error(error);
-            alert('Error saving questions');
-        } finally {
-            this.saving.set(false);
-        }
-    }
+  }
 }

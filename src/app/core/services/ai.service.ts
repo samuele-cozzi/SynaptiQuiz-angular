@@ -14,13 +14,16 @@ export class AiService {
         this.genAI = new GoogleGenerativeAI(this.checkEnv);
     }
 
-    async generateQuestions(topic: string, language: 'en' | 'it', difficulties: number[], countPerDifficulty: number): Promise<Partial<Question>[]> {
+    async generateQuestions(topic: string, language: 'en' | 'it', difficulties: number[], countPerDifficulty: number, targetAudience?: string): Promise<Partial<Question>[]> {
         const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' }); // Fallback to 1.5-flash as 2.5 is not standard yet
+
+        const audienceContext = targetAudience ? `\n      Target Audience: "${targetAudience}". Adjust question complexity and wording to suit this audience.` : '';
 
         const prompt = `
       Generate ${countPerDifficulty} quiz questions for EACH of the following difficulty levels: ${difficulties.join(', ')}.
       Topic: "${topic}".
       Language: "${language}".
+      Target Audience: "${targetAudience}".
       
       Total questions to generate: ${difficulties.length * countPerDifficulty}.
       

@@ -119,6 +119,48 @@ import { Topic } from '../../core/models/topic.model';
             }
           </div>
           <p class="text-sm text-gray-500">Selected: {{ selectedPlayers().length }}</p>
+          
+          <!-- Selected Players Order -->
+          @if (selectedPlayers().length > 0) {
+            <div class="mt-4">
+              <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Player Order (First player starts the game)</h4>
+              <div class="space-y-2">
+                @for (player of selectedPlayers(); track player.uid; let idx = $index) {
+                  <div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded-md">
+                    <div class="flex items-center space-x-3">
+                      <span class="text-sm font-bold text-gray-500 dark:text-gray-400 w-6">#{{ idx + 1 }}</span>
+                      <img class="h-8 w-8 rounded-full" [src]="player.photoURL" alt="" />
+                      <span class="text-sm font-medium text-gray-900 dark:text-white">{{ player.username }}</span>
+                    </div>
+                    <div class="flex space-x-1">
+                      <button
+                        type="button"
+                        (click)="movePlayerUp(idx)"
+                        [disabled]="idx === 0"
+                        class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Move up"
+                      >
+                        <svg class="h-5 w-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        (click)="movePlayerDown(idx)"
+                        [disabled]="idx === selectedPlayers().length - 1"
+                        class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Move down"
+                      >
+                        <svg class="h-5 w-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
         </div>
 
         <!-- Step 3: Select Questions -->
@@ -360,6 +402,24 @@ export class GameCreateComponent implements OnInit {
 
   isSelectedPlayer(uid: string) {
     return this.selectedPlayers().some((p) => p.uid === uid);
+  }
+
+  movePlayerUp(index: number) {
+    if (index === 0) return;
+    this.selectedPlayers.update((current) => {
+      const newArray = [...current];
+      [newArray[index - 1], newArray[index]] = [newArray[index], newArray[index - 1]];
+      return newArray;
+    });
+  }
+
+  movePlayerDown(index: number) {
+    if (index === this.selectedPlayers().length - 1) return;
+    this.selectedPlayers.update((current) => {
+      const newArray = [...current];
+      [newArray[index], newArray[index + 1]] = [newArray[index + 1], newArray[index]];
+      return newArray;
+    });
   }
 
   toggleQuestion(q: Question) {
