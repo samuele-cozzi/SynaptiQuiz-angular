@@ -4,12 +4,16 @@ import { TranslateModule } from '@ngx-translate/core';
 import { TopicService } from '../../core/services/topic.service';
 import { Topic } from '../../core/models/topic.model';
 import { FormsModule } from '@angular/forms';
+import { TopicDetailComponent } from './topic-detail.component';
 
 @Component({
     selector: 'app-topics',
     standalone: true,
-    imports: [CommonModule, TranslateModule, FormsModule],
+    imports: [CommonModule, TranslateModule, FormsModule, TopicDetailComponent],
     template: `
+    @if (selectedTopic()) {
+      <app-topic-detail [topic]="selectedTopic()" (onBack)="onTopicDetailBack()"></app-topic-detail>
+    } @else {
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div class="sm:flex sm:items-center">
         <div class="sm:flex-auto">
@@ -31,42 +35,36 @@ import { FormsModule } from '@angular/forms';
                  class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white p-2">
       </div>
 
-      <div class="mt-8 flex flex-col">
-        <div class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-            <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-              <table class="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
-                <thead class="bg-gray-50 dark:bg-gray-800">
-                  <tr>
-                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-200">Image</th>
-                    <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-200 sm:pl-6">Name</th>
-                    <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                      <span class="sr-only">Edit</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
-                  @for (topic of filteredTopics(); track topic.id) {
-                      <tr>
-                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                            <img [src]="topic.imageUrl" class="h-10 w-10 rounded object-cover" alt="">
-                        </td>
-                        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-6">
-                            {{ topic.text }}
-                        </td>
-                        <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                          <button (click)="openModal(topic)" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-4">
-                              {{ 'COMMON.EDIT' | translate }}
-                          </button>
-                          <!-- Technically prompt didn't say delete for topic, only update, but usually expected -->
-                        </td>
-                      </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
+      <!-- Card View -->
+      <div class="mt-8">
+        @if (filteredTopics().length > 0) {
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            @for (topic of filteredTopics(); track topic.id) {
+              <div class="overflow-hidden rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 cursor-pointer group" (click)="selectedTopic.set(topic)">
+                <!-- Image Container -->
+                <div class="aspect-square overflow-hidden bg-gray-100 dark:bg-gray-700">
+                  <img [src]="topic.imageUrl" alt="{{ topic.text }}" class="h-full w-full object-cover hover:scale-105 transition-transform duration-300">
+                </div>
+                
+                <!-- Content Container -->
+                <div class="p-4 flex flex-col justify-between h-24">
+                  <h3 class="text-lg font-semibold text-gray-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    {{ topic.text }}
+                  </h3>
+                  
+                  <!-- Edit Button -->
+                  <button (click)="openModal(topic, $event)" class="mt-2 w-full inline-flex items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors">
+                    {{ 'COMMON.EDIT' | translate }}
+                  </button>
+                </div>
+              </div>
+            }
           </div>
-        </div>
+        } @else {
+          <div class="text-center py-12">
+            <p class="text-gray-500 dark:text-gray-400">{{ 'COMMON.NO_DATA' | translate }}</p>
+          </div>
+        }
       </div>
     </div>
 
@@ -110,12 +108,14 @@ import { FormsModule } from '@angular/forms';
           </div>
         </div>
     }
+    }
   `
 })
 export class TopicsListComponent {
     topicService = inject(TopicService);
 
     topics = signal<Topic[]>([]);
+    selectedTopic = signal<Topic | null>(null);
     searchTerm = '';
 
     // Modal State
@@ -135,7 +135,10 @@ export class TopicsListComponent {
         );
     }
 
-    openModal(topic?: Topic) {
+    openModal(topic?: Topic, event?: Event) {
+        if (event) {
+            event.stopPropagation();
+        }
         this.showModal = true;
         if (topic) {
             this.isEditing = true;
@@ -164,5 +167,9 @@ export class TopicsListComponent {
             });
         }
         this.closeModal();
+    }
+
+    onTopicDetailBack() {
+        this.selectedTopic.set(null);
     }
 }

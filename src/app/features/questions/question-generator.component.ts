@@ -64,6 +64,18 @@ import { Router } from '@angular/router';
             >
             <p class="text-xs text-gray-400 mt-1">Specify who will play to get more appropriate questions</p>
           </div>
+
+            <!-- Gemini API Key -->
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium mb-2">Gemini API Key</label>
+              <input 
+                type="password" 
+                [(ngModel)]="geminiApiKey" 
+                placeholder="Enter your Gemini API key..."
+                class="w-full p-2 rounded bg-gray-700 border-gray-600 focus:border-blue-500 text-white placeholder-gray-400"
+              >
+              <p class="text-xs text-gray-400 mt-1">Your API key is only used for this session and not stored</p>
+            </div>
         </div>
 
         <button (click)="generate()" [disabled]="loading() || !selectedTopicId" 
@@ -113,6 +125,7 @@ export class QuestionGeneratorComponent {
   selectedDifficulties: number[] = [1];
   count = 2;
   targetAudience = '';
+    geminiApiKey = '';
 
   loading = signal(false);
   saving = signal(false);
@@ -146,6 +159,8 @@ export class QuestionGeneratorComponent {
         this.selectedDifficulties,
         this.count,
         this.targetAudience
+          ,
+         this.geminiApiKey
       );
       this.generatedQuestions.set(questions);
     } catch (error) {

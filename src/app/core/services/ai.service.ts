@@ -7,15 +7,17 @@ import { Question } from '../models/question.model';
 })
 export class AiService {
     // TODO: Replace with your actual API key
-    private readonly checkEnv = (window as any).GEMINI_API_KEY || 'AIzaSyBXYwSjuVmcikIclj0nt2ahJu8qpHAMlYc';
+    private readonly checkEnv = (window as any).GEMINI_API_KEY;
     private genAI: GoogleGenerativeAI;
 
     constructor() {
         this.genAI = new GoogleGenerativeAI(this.checkEnv);
     }
 
-    async generateQuestions(topic: string, language: 'en' | 'it', difficulties: number[], countPerDifficulty: number, targetAudience?: string): Promise<Partial<Question>[]> {
-        const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' }); // Fallback to 1.5-flash as 2.5 is not standard yet
+    async generateQuestions(topic: string, language: 'en' | 'it', difficulties: number[], countPerDifficulty: number, targetAudience?: string, apiKey?: string): Promise<Partial<Question>[]> {
+        const effectiveApiKey = apiKey || this.checkEnv;
+        const genAI = new GoogleGenerativeAI(effectiveApiKey);
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' }); // Fallback to 1.5-flash as 2.5 is not standard yet
 
         const audienceContext = targetAudience ? `\n      Target Audience: "${targetAudience}". Adjust question complexity and wording to suit this audience.` : '';
 
