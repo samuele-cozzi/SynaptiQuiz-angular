@@ -94,7 +94,7 @@ import { Topic } from '../../core/models/topic.model';
 
           <!-- Players Grid -->
           <div
-            class="grid grid-cols-1 gap-4 sm:grid-cols-3 h-64 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md p-4"
+            class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 h-64 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md p-4"
           >
             @for (player of filteredPlayers(); track player.uid) {
             <div
@@ -132,27 +132,23 @@ import { Topic } from '../../core/models/topic.model';
             </p>
           </div>
 
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div class="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-3 sm:gap-4">
             <input
               type="text"
               [(ngModel)]="questionSearch"
               placeholder="Search text..."
               class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white p-2"
             />
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >Topic</label
-              >
-              <select
-                [(ngModel)]="questionTopicId"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white p-2"
-              >
-                <option value="">All Topics</option>
-                @for (topic of topics(); track topic.id) {
-                <option [value]="topic.id">{{ topic.text }}</option>
-                }
-              </select>
-            </div>
+            
+            <select
+              [(ngModel)]="questionTopicId"
+              class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white p-2"
+            >
+              <option value="">All Topics</option>
+              @for (topic of topics(); track topic.id) {
+              <option [value]="topic.id">{{ topic.text }}</option>
+              }
+            </select>
             <select
               [(ngModel)]="questionDifficulty"
               class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white p-2"
@@ -168,11 +164,11 @@ import { Topic } from '../../core/models/topic.model';
 
           <!-- Questions Grid -->
           <div
-            class="grid grid-cols-1 gap-4 h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md p-4"
+            class="grid grid-cols-1 gap-3 h-80 sm:h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md p-4"
           >
             @for (q of filteredQuestions(); track q.id) {
             <div
-              class="relative flex items-start p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+              class="relative flex items-start p-3 rounded hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
               (click)="toggleQuestion(q)"
               [class.bg-indigo-50]="isSelectedQuestion(q.id)"
               [class.dark:bg-indigo-900]="isSelectedQuestion(q.id)"

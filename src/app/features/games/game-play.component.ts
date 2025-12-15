@@ -66,12 +66,12 @@ interface GroupedQuestion {
                  @for (group of groupedQuestions(); track group.topicName) {
                     <div class="mb-6">
                        <h4 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-3">{{ group.topicName }}</h4>
-                       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                       <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                           @for (item of group.questions; track item.question.id) {
                              <button 
                                 (click)="selectQuestion(item.question.id)"
                                 [disabled]="!isMyTurn(g) && !isAdmin()"
-                                class="relative block border-2 border-gray-300 dark:border-gray-600 rounded-lg p-4 hover:border-indigo-500 dark:hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                                class="relative block border-2 border-gray-300 dark:border-gray-600 rounded-lg p-3 sm:p-4 hover:border-indigo-500 dark:hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors min-h-[80px] sm:min-h-[100px]"
                                 [class.opacity-50]="!isMyTurn(g) && !isAdmin()"
                                 [class.cursor-not-allowed]="!isMyTurn(g) && !isAdmin()">
                                 <div class="text-center">
@@ -102,11 +102,11 @@ interface GroupedQuestion {
                    <div class="border-t border-gray-200 dark:border-gray-700 px-4 py-5 sm:p-6">
                        <p class="text-xl text-gray-900 dark:text-white mb-6 font-semibold">{{ q.text }}</p>
                        
-                       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                       <div class="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2">
                            @for (ans of q.answers; track $index) {
                                <button (click)="submitAnswer(g, q.id, $index)" 
                                        [disabled]="!isMyTurn(g)"
-                                       class="relative block w-full border rounded-lg p-4 text-left hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:hover:border-indigo-400 dark:bg-gray-700"
+                                       class="relative block w-full border-2 rounded-lg p-4 text-left hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:hover:border-indigo-400 dark:bg-gray-700 min-h-[60px] transition-colors"
                                        [class.opacity-50]="!isMyTurn(g)"
                                        [class.cursor-not-allowed]="!isMyTurn(g)">
                                    <span class="font-medium text-gray-900 dark:text-white">{{ ans.text }}</span>
