@@ -62,37 +62,13 @@ interface GroupedQuestion {
            </div>
 
            <!-- Question Selection Mode -->
-           @if (!selectedQuestionId()) {
-              <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-6">
-                 <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Select a Question</h3>
-                 
-                 @for (group of groupedQuestions(); track group.topicName) {
-                    <div class="mb-6">
-                       <h4 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-3">{{ group.topicName }}</h4>
-                       <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                          @for (item of group.questions; track item.question.id) {
-                             <button 
-                                (click)="selectQuestion(item.question.id)"
-                                [disabled]="!isMyTurn(g) && !isAdmin()"
-                                class="relative block border-2 border-gray-300 dark:border-gray-600 rounded-lg p-3 sm:p-4 hover:border-indigo-500 dark:hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors min-h-[80px] sm:min-h-[100px]"
-                                [class.opacity-50]="!isMyTurn(g) && !isAdmin()"
-                                [class.cursor-not-allowed]="!isMyTurn(g) && !isAdmin()">
-                                <div class="text-center">
-                                   <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Difficulty</div>
-                                   <div class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ item.question.difficulty }}</div>
-                                   <div class="text-xs text-gray-600 dark:text-gray-300 mt-2">{{ item.topicName }}</div>
-                                </div>
-                             </button>
-                          }
-                       </div>
-                    </div>
-                 }
-              </div>
-           }
+           <!-- @if (!selectedQuestionId()) {
+              
+           } -->
 
            <!-- Question Answer Mode -->
-           @if (selectedQuestionId() && (isMyTurn(g) || isAdmin())) {
-              @if (currentQuestion(); as q) {
+           <!-- @if (selectedQuestionId() && (isMyTurn(g) || isAdmin())) { -->
+              @if ((isMyTurn(g) || isAdmin()) && g.currentSelectedQuestionId  && currentQuestion(); as q) {
                                 <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden relative">
                                         <div [hidden]="!showCorrectEffect()" class="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                                             <!-- Simple check animation -->
@@ -130,11 +106,33 @@ interface GroupedQuestion {
                    </div>
                 </div>
               } @else {
-                  <div class="text-center py-10">
-                      <p class="text-gray-500">Loading question...</p>
-                  </div>
+                <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-6">
+                 <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Select a Question</h3>
+                 
+                 @for (group of groupedQuestions(); track group.topicName) {
+                    <div class="mb-6">
+                       <h4 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-3">{{ group.topicName }}</h4>
+                       <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                          @for (item of group.questions; track item.question.id) {
+                             <button 
+                                (click)="selectQuestion(item.question.id)"
+                                [disabled]="!isMyTurn(g) && !isAdmin()"
+                                class="relative block border-2 border-gray-300 dark:border-gray-600 rounded-lg p-3 sm:p-4 hover:border-indigo-500 dark:hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors min-h-[80px] sm:min-h-[100px]"
+                                [class.opacity-50]="!isMyTurn(g) && !isAdmin()"
+                                [class.cursor-not-allowed]="!isMyTurn(g) && !isAdmin()">
+                                <div class="text-center">
+                                   <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Difficulty</div>
+                                   <div class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ item.question.difficulty }}</div>
+                                   <div class="text-xs text-gray-600 dark:text-gray-300 mt-2">{{ item.topicName }}</div>
+                                </div>
+                             </button>
+                          }
+                       </div>
+                    </div>
+                 }
+              </div>
               }
-           }
+           <!-- } -->
 
            <ul class="divide-y divide-gray-200 dark:divide-gray-700">
             @for (p of g.players; track p.uid) {
@@ -187,7 +185,7 @@ export class GamePlayComponent implements OnInit, OnDestroy {
     gameSub?: Subscription;
     topicsSub?: Subscription;
 
-    selectedQuestionId = signal<string | null>(null);
+    // selectedQuestionId = signal<string | null>(null);
     currentQuestion = signal<Question | null>(null);
 
     // Visual effect when an answer is correct
@@ -240,12 +238,7 @@ export class GamePlayComponent implements OnInit, OnDestroy {
                 if (g) {
                     this.game.set(g as Game);
 
-                    // Sync selected question from game state (so admin can see what current player selected)
-                    if (g.currentSelectedQuestionId && g.currentSelectedQuestionId !== this.selectedQuestionId()) {
-                        this.selectedQuestionId.set(g.currentSelectedQuestionId);
-                    }
-
-                    this.updateCurrentQuestion(g as Game);
+                    this.currentQuestion.set(null);
                 }
             });
         }
@@ -267,42 +260,11 @@ export class GamePlayComponent implements OnInit, OnDestroy {
         if (!g) return;
 
         // Update local state
-        this.selectedQuestionId.set(questionId);
+        g.currentSelectedQuestionId = questionId;
         const question = g.questions.find(q => q.id === questionId);
         this.currentQuestion.set(question || null);
-
-        // Save to Firestore so other players (especially admin) can see the selection
-        if (this.isMyTurn(g)) {
-            await this.gameService.updateGame(g.id, {
-                currentSelectedQuestionId: questionId
-            });
-        }
     }
 
-
-
-    async updateCurrentQuestion(g: Game) {
-        if (g.status === 'completed') {
-            this.currentQuestion.set(null);
-            this.selectedQuestionId.set(null);
-            if (this.isMyTurn(g)) {
-                await this.gameService.updateGame(g.id, {
-                    currentSelectedQuestionId: null
-                });
-            }
-            return;
-        }
-
-        // If a question is selected, show it
-        if (this.selectedQuestionId()) {
-            const question = g.questions.find(q => q.id === this.selectedQuestionId());
-            this.currentQuestion.set(question || null);
-        } else {
-            // For non-current-player, show the first available question
-            const available = this.availableQuestions();
-            this.currentQuestion.set(available[0] || null);
-        }
-    }
 
     getPlayerName(uid: string) {
         return this.game()?.players.find(p => p.uid === uid)?.username || 'Unknown';
@@ -334,15 +296,6 @@ export class GamePlayComponent implements OnInit, OnDestroy {
             }
 
             await this.gameService.submitAnswer(g.id, g, qId, aIndex);
-
-            // Reset selection after answering
-            this.selectedQuestionId.set(null);
-
-            if (this.isMyTurn(g)) {
-                await this.gameService.updateGame(g.id, {
-                    currentSelectedQuestionId: null
-                });
-            }
         } catch (e) {
             alert(e);
         }
