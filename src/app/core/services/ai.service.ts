@@ -37,10 +37,10 @@ export class AiService {
         "topicId": "ai-generated", 
         "language": "${language}",
         "answers": [
-          { "text": "Answer 1", "correct": boolean },
-          { "text": "Answer 2", "correct": boolean },
-          { "text": "Answer 3", "correct": boolean },
-          { "text": "Answer 4", "correct": boolean }
+          { "text": "Answer 1", "correct": boolean, "plausibility": number },
+          { "text": "Answer 2", "correct": boolean, "plausibility": number },
+          { "text": "Answer 3", "correct": boolean, "plausibility": number },
+          { "text": "Answer 4", "correct": boolean, "plausibility": number }
         ]
       }
       

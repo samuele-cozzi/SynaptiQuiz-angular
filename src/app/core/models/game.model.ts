@@ -5,6 +5,10 @@ export type GameStatus = 'waiting' | 'in_progress' | 'completed';
 
 export interface GamePlayer extends Player {
     score: number;
+    // Lifelines / helpers available to the player
+    externalHelps?: number; // number of external helps available (e.g., consult a friend)
+    fiftyFifty?: number; // number of 50/50 lifelines
+    switches?: number; // number of question switches available
 }
 
 export interface PlayerAnswer {

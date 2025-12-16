@@ -72,6 +72,26 @@ import { Topic } from '../../core/models/topic.model';
               <p class="mt-2 text-sm text-gray-500">Changing language resets selected questions.</p>
             </div>
           </div>
+
+          <!-- Lifelines per player -->
+          <div class="sm:grid sm:grid-cols-3 sm:gap-4 sm:items-start sm:border-t sm:border-gray-200 dark:sm:border-gray-700 sm:pt-5">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 sm:mt-px sm:pt-2">Helpers per player</label>
+            <div class="mt-1 sm:mt-0 sm:col-span-2 grid grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs text-gray-500">External Help</label>
+                <input type="number" min="0" [(ngModel)]="gameData.externalHelpsPerPlayer" class="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm text-sm" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500">50/50</label>
+                <input type="number" min="0" [(ngModel)]="gameData.fiftyFiftyPerPlayer" class="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm text-sm" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500">Switch</label>
+                <input type="number" min="0" [(ngModel)]="gameData.switchesPerPlayer" class="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm text-sm" />
+              </div>
+            </div>
+            <p class="sm:col-span-2 text-sm text-gray-500">Number of helpers assigned to each player at game start (default 0).</p>
+          </div>
         </div>
 
         <!-- Step 2: Select Players -->
@@ -291,6 +311,9 @@ export class GameCreateComponent implements OnInit {
   gameData = {
     name: '',
     language: (localStorage.getItem('language') as 'en' | 'it') || 'en',
+    externalHelpsPerPlayer: 0,
+    fiftyFiftyPerPlayer: 0,
+    switchesPerPlayer: 0,
   };
 
   // Filters
@@ -454,6 +477,9 @@ export class GameCreateComponent implements OnInit {
     const playersWithScore = this.selectedPlayers().map((p) => ({
       ...p,
       score: 0,
+      externalHelps: this.gameData.externalHelpsPerPlayer ?? 0,
+      fiftyFifty: this.gameData.fiftyFiftyPerPlayer ?? 0,
+      switches: this.gameData.switchesPerPlayer ?? 0,
     }));
 
     await this.gameService.createGame({

@@ -111,13 +111,27 @@ interface GroupedQuestion {
                    <div class="border-t border-gray-200 dark:border-gray-700 px-4 py-5 sm:p-6">
                        <p class="text-xl text-gray-900 dark:text-white mb-6 font-semibold">{{ q.text }}</p>
                        
-                       <div class="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2">
+                            @if (isMyTurn(g) || isAdmin()) {
+                                <div class="flex items-center space-x-3 mb-4">
+                                    <button (click)="useExternalHelp(g)" [disabled]="(getMyGamePlayer(g)?.externalHelps || 0) <= 0" class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm bg-white dark:bg-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                                        External Help ({{ getMyGamePlayer(g)?.externalHelps || 0 }})
+                                    </button>
+                                    <button (click)="useFiftyFifty(g)" [disabled]="(getMyGamePlayer(g)?.fiftyFifty || 0) <= 0" class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm bg-white dark:bg-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                                        50/50 ({{ getMyGamePlayer(g)?.fiftyFifty || 0 }})
+                                    </button>
+                                    <button (click)="useSwitch(g)" [disabled]="(getMyGamePlayer(g)?.switches || 0) <= 0" class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm bg-white dark:bg-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                                        Switch ({{ getMyGamePlayer(g)?.switches || 0 }})
+                                    </button>
+                                </div>
+                            }
+
+                            <div class="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2">
                            @for (ans of q.answers; track $index) {
-                               <button (click)="submitAnswer(g, q.id, $index)" 
-                                       [disabled]="!isMyTurn(g) && !isAdmin()"
+                                   <button (click)="submitAnswer(g, q.id, $index)" 
+                                       [disabled]="(!isMyTurn(g) && !isAdmin()) || hiddenAnswerIndexes().includes($index)"
                                        class="relative block w-full border-2 rounded-lg p-4 text-left hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:hover:border-indigo-400 dark:bg-gray-700 min-h-[60px] transition-colors"
-                                       [class.opacity-50]="!isMyTurn(g) && !isAdmin()"
-                                       [class.cursor-not-allowed]="!isMyTurn(g) && !isAdmin()">
+                                       [class.opacity-50]="(!isMyTurn(g) && !isAdmin()) || hiddenAnswerIndexes().includes($index)"
+                                       [class.cursor-not-allowed]="(!isMyTurn(g) && !isAdmin()) || hiddenAnswerIndexes().includes($index)">
                                    <span class="font-medium text-gray-900 dark:text-white">{{ ans.text }}</span>
                                </button>
                            }
@@ -196,6 +210,9 @@ export class GamePlayComponent implements OnInit, OnDestroy {
     showCorrectEffect = signal(false);
     effectTimeout: any = null;
 
+    // Hidden answers indexes for 50/50
+    hiddenAnswerIndexes = signal<number[]>([]);
+
     isAdmin = computed(() => this.authService.currentUser()?.role === 'admin');
 
     // Compute available questions (not yet answered)
@@ -270,6 +287,8 @@ export class GamePlayComponent implements OnInit, OnDestroy {
             currentQuestion: question || null
         });
         this.currentQuestion.set(question || null);
+        // reset any 50/50 state when selecting a new question
+        this.hiddenAnswerIndexes.set([]);
     }
 
 
@@ -284,6 +303,53 @@ export class GamePlayComponent implements OnInit, OnDestroy {
     getTopicImageUrl(topicId: string): string {
         const topic = this.topics().find(t => t.id === topicId);
         return topic?.imageUrl || 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%23cccccc%22%2F%3E%3C%2Fsvg%3E';
+    }
+
+    getMyGamePlayer(g: Game) {
+        const uid = g.currentTurnPlayerId;
+        return g.players.find(p => p.uid === uid);
+    }
+
+    async useExternalHelp(g: Game) {
+        const me = this.getMyGamePlayer(g);
+        if (!me || (me.externalHelps || 0) <= 0) return;
+        const updatedPlayers = g.players.map(p => p.uid === me.uid ? { ...p, externalHelps: (p.externalHelps || 0) - 1 } : p);
+        await this.gameService.updateGame(g.id, { players: updatedPlayers });
+    }
+
+    async useFiftyFifty(g: Game) {
+        const me = this.getMyGamePlayer(g);
+        const q = g.currentQuestion as Question | null;
+        if (!me || (me.fiftyFifty || 0) <= 0 || !q) return;
+
+        const arr = q.answers.map((a, idx) => ({ idx, plaus: a.plausibility || 0, correct: !!a.correct }));
+        const nonCorrect = arr.filter(x => !x.correct).sort((a, b) => a.plaus - b.plaus);
+        let toHide: number[] = [];
+        if (nonCorrect.length >= 2) {
+            toHide = [nonCorrect[0].idx, nonCorrect[1].idx];
+        } else {
+            const allSorted = arr.sort((a, b) => a.plaus - b.plaus);
+            toHide = [allSorted[0].idx];
+            if (allSorted.length > 1) toHide.push(allSorted[1].idx);
+        }
+
+        this.hiddenAnswerIndexes.set(toHide);
+
+        const updatedPlayers = g.players.map(p => p.uid === me.uid ? { ...p, fiftyFifty: (p.fiftyFifty || 0) - 1 } : p);
+        await this.gameService.updateGame(g.id, { players: updatedPlayers });
+    }
+
+    async useSwitch(g: Game) {
+        const me = this.getMyGamePlayer(g);
+        if (!me || (me.switches || 0) <= 0) return;
+
+        const updatedPlayers = g.players.map(p => p.uid === me.uid ? { ...p, switches: (p.switches || 0) - 1 } : p);
+
+        // Clear current question so a new one can be selected
+        await this.gameService.updateGame(g.id, { players: updatedPlayers, currentSelectedQuestionId: null, currentQuestion: null });
+
+        this.currentQuestion.set(null);
+        this.hiddenAnswerIndexes.set([]);
     }
 
     isMyTurn(g: Game) {
@@ -304,6 +370,8 @@ export class GamePlayComponent implements OnInit, OnDestroy {
             }
 
             await this.gameService.submitAnswer(g.id, g, qId, aIndex);
+            // Reset any 50/50 after answering
+            this.hiddenAnswerIndexes.set([]);
         } catch (e) {
             alert(e);
         }
