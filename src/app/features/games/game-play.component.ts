@@ -44,7 +44,24 @@ interface GroupedQuestion {
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         @if (g.status !== 'completed') {
-           <!-- Turn Indicator -->
+           <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+                @for (p of g.players; track p.uid) {
+                <li class="py-4 flex items-center justify-between">
+                    <div class="flex items-center">
+                    <span class="text-2xl font-bold text-gray-400 mr-4">#{{ $index + 1 }}</span>
+                    <img class="h-10 w-10 rounded-full" [src]="p.photoURL" alt="" />
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">{{ p.username }}</p>
+                    </div>
+                    </div>
+                    <div class="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                    {{ p.score }} pts
+                    </div>
+                </li>
+                }
+            </ul>
+           
+            <!-- Turn Indicator -->
            <div class="bg-indigo-50 dark:bg-indigo-900 border-l-4 border-indigo-400 p-4 mb-6">
               <div class="flex">
                 <div class="flex-shrink-0">
@@ -61,6 +78,8 @@ interface GroupedQuestion {
               </div>
            </div>
 
+           
+
            <!-- Question Selection Mode -->
            <!-- @if (!selectedQuestionId()) {
               
@@ -68,7 +87,7 @@ interface GroupedQuestion {
 
            <!-- Question Answer Mode -->
            <!-- @if (selectedQuestionId() && (isMyTurn(g) || isAdmin())) { -->
-              @if ((isMyTurn(g) || isAdmin()) && g.currentSelectedQuestionId  && currentQuestion(); as q) {
+              @if ((isMyTurn(g) || isAdmin())  && g.currentQuestion; as q) {
                                 <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden relative">
                                         <div [hidden]="!showCorrectEffect()" class="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                                             <!-- Simple check animation -->
@@ -95,10 +114,10 @@ interface GroupedQuestion {
                        <div class="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2">
                            @for (ans of q.answers; track $index) {
                                <button (click)="submitAnswer(g, q.id, $index)" 
-                                       [disabled]="!isMyTurn(g)"
+                                       [disabled]="!isMyTurn(g) && !isAdmin()"
                                        class="relative block w-full border-2 rounded-lg p-4 text-left hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:hover:border-indigo-400 dark:bg-gray-700 min-h-[60px] transition-colors"
-                                       [class.opacity-50]="!isMyTurn(g)"
-                                       [class.cursor-not-allowed]="!isMyTurn(g)">
+                                       [class.opacity-50]="!isMyTurn(g) && !isAdmin()"
+                                       [class.cursor-not-allowed]="!isMyTurn(g) && !isAdmin()">
                                    <span class="font-medium text-gray-900 dark:text-white">{{ ans.text }}</span>
                                </button>
                            }
@@ -134,22 +153,7 @@ interface GroupedQuestion {
               }
            <!-- } -->
 
-           <ul class="divide-y divide-gray-200 dark:divide-gray-700">
-            @for (p of g.players; track p.uid) {
-            <li class="py-4 flex items-center justify-between">
-                <div class="flex items-center">
-                <span class="text-2xl font-bold text-gray-400 mr-4">#{{ $index + 1 }}</span>
-                <img class="h-10 w-10 rounded-full" [src]="p.photoURL" alt="" />
-                <div class="ml-3">
-                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ p.username }}</p>
-                </div>
-                </div>
-                <div class="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-                {{ p.score }} pts
-                </div>
-            </li>
-            }
-            </ul>
+           
 
         } @else {
             <div class="text-center py-12">
@@ -262,6 +266,9 @@ export class GamePlayComponent implements OnInit, OnDestroy {
         // Update local state
         g.currentSelectedQuestionId = questionId;
         const question = g.questions.find(q => q.id === questionId);
+        await this.gameService.updateGame(g.id, {
+            currentQuestion: question || null
+        });
         this.currentQuestion.set(question || null);
     }
 
@@ -284,10 +291,11 @@ export class GamePlayComponent implements OnInit, OnDestroy {
     }
 
     async submitAnswer(g: Game, qId: string, aIndex: number) {
-        if (!this.isMyTurn(g)) return;
+        if (!this.isMyTurn(g) && !this.isAdmin) return;
         try {
             // Determine correctness locally and trigger effect immediately
-            const cq = this.currentQuestion();
+            //const cq = this.currentQuestion();
+            const cq = g.currentQuestion;
             const answeredCorrectly = !!cq && !!cq.answers && cq.answers[aIndex] && cq.answers[aIndex].correct;
             if (answeredCorrectly) {
                 this.showCorrectEffect.set(true);

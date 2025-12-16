@@ -462,6 +462,7 @@ export class GameCreateComponent implements OnInit {
       createdBy: currentUser.uid,
       players: playersWithScore,
       questions: this.selectedQuestions(),
+      currentQuestion: null,
     });
 
     this.router.navigate(['/games']);

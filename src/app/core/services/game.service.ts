@@ -56,7 +56,7 @@ export class GameService {
     async submitAnswer(gameId: string, game: Game, questionId: string, answerIndex: number) {
         // Validate Turn
         const currentUser = this.authService.currentUser();
-        if (!currentUser || game.currentTurnPlayerId !== currentUser.uid) {
+        if (!currentUser || (game.currentTurnPlayerId !== currentUser.uid) && this.authService.currentUser()?.role !== 'admin') {
             throw new Error('Not your turn!');
         }
 
@@ -69,7 +69,7 @@ export class GameService {
         const points = isCorrect ? (pointsMap[question.difficulty] || 10) : -(pointsMap[question.difficulty] || 10) / 2;
 
         const newAnswer: PlayerAnswer = {
-            playerId: currentUser.uid,
+            playerId: game.currentTurnPlayerId,
             questionId,
             answerIndex,
             isCorrect,
@@ -81,7 +81,7 @@ export class GameService {
 
         // Update Player Score
         const updatedPlayers = game.players.map(p => {
-            if (p.uid === currentUser.uid) {
+            if (p.uid === game.currentTurnPlayerId) {
                 return { ...p, score: p.score + points };
             }
             return p;
@@ -148,6 +148,7 @@ export class GameService {
             players: updatedPlayers,
             currentTurnPlayerId: nextTurnPlayerId,
             currentSelectedQuestionId: null, // Clear selection after answer
+            currentQuestion: null,
             status
         };
 

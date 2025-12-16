@@ -25,6 +25,7 @@ export interface Game {
 
     players: GamePlayer[]; // List of X players
     questions: Question[]; // List of Y questions
+    currentQuestion: Question | null; // Current question being answered
 
     // State
     currentQuestionIndex: number;
