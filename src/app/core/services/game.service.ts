@@ -66,7 +66,7 @@ export class GameService {
         const isCorrect = question.answers[answerIndex].correct;
         // Points logic: 10, 20, 50, 100, 150 respect to difficulties (1-5)
         const pointsMap: { [key: number]: number } = { 1: 10, 2: 20, 3: 50, 4: 100, 5: 150 };
-        const points = isCorrect ? (pointsMap[question.difficulty] || 10) : 0;
+        const points = isCorrect ? (pointsMap[question.difficulty] || 10) : -(pointsMap[question.difficulty] || 10) / 2;
 
         const newAnswer: PlayerAnswer = {
             playerId: currentUser.uid,

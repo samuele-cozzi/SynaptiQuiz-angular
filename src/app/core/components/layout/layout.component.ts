@@ -16,7 +16,8 @@ import { AuthService } from '../../services/auth.service';
         <div class="flex flex-col w-64">
           <div class="flex flex-col h-0 flex-1 bg-white dark:bg-gray-800">
             <div class="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-              <div class="flex items-center flex-shrink-0 px-4">
+              <div class="flex items-center flex-shrink-0 px-4 gap-2">
+                 <img src="assets/logo.svg" alt="SynaptiQuiz" class="h-8 w-8"/>
                  <h1 class="text-gray-900 dark:text-white font-bold text-xl">SynaptiQuiz</h1>
               </div>
               <nav class="mt-5 flex-1 px-2 space-y-1">
@@ -98,7 +99,10 @@ import { AuthService } from '../../services/auth.service';
       
       <!-- Mobile header with burger menu -->
       <div class="md:hidden fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 p-4 flex justify-between items-center text-gray-900 dark:text-white z-20">
-        <span class="font-bold text-lg">SynaptiQuiz</span>
+        <div class="flex items-center gap-2">
+          <img src="assets/logo.svg" alt="SynaptiQuiz" class="h-6 w-6"/>
+          <span class="font-bold text-lg">SynaptiQuiz</span>
+        </div>
         <button (click)="toggleMobileMenu()" class="p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-white">
             @if (!mobileMenuOpen()) {
             <!-- Hamburger Icon -->

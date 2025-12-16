@@ -157,7 +157,8 @@ export class GamesListComponent {
         !this.filters.name || g.name.toLowerCase().includes(this.filters.name.toLowerCase());
       const matchesStatus = !this.filters.status || g.status === this.filters.status;
       const matchesLang = !this.filters.language || g.language === this.filters.language;
-      return matchesName && matchesStatus && matchesLang;
+      const iserId = this.isAdmin || g.players.some(obj => obj.uid === this.currentUserId);
+      return matchesName && matchesStatus && matchesLang && iserId;
     });
   }
 

@@ -1,0 +1,42 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="#f0f9ff" stroke="#3b82f6" stroke-width="2"/>
+  
+  <!-- Brain/neural network theme -->
+  <g id="brain-network">
+    <!-- Left hemisphere neurons -->
+    <circle cx="60" cy="80" r="8" fill="#3b82f6"/>
+    <circle cx="50" cy="100" r="6" fill="#6366f1"/>
+    <circle cx="60" cy="120" r="7" fill="#3b82f6"/>
+    
+    <!-- Right hemisphere neurons -->
+    <circle cx="140" cy="80" r="8" fill="#3b82f6"/>
+    <circle cx="150" cy="100" r="6" fill="#6366f1"/>
+    <circle cx="140" cy="120" r="7" fill="#3b82f6"/>
+    
+    <!-- Center hub -->
+    <circle cx="100" cy="100" r="10" fill="#1e40af"/>
+    
+    <!-- Connection lines -->
+    <line x1="68" y1="80" x2="90" y2="95" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/>
+    <line x1="56" y1="100" x2="90" y2="100" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
+    <line x1="68" y1="120" x2="90" y2="105" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/>
+    
+    <line x1="132" y1="80" x2="110" y2="95" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/>
+    <line x1="144" y1="100" x2="110" y2="100" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
+    <line x1="132" y1="120" x2="110" y2="105" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Question mark overlay (subtle) -->
+  <g id="question-mark" opacity="0.15">
+    <text x="100" y="155" font-size="60" font-weight="bold" fill="#1e40af" text-anchor="middle" font-family="Arial, sans-serif">?</text>
+  </g>
+  
+  <!-- Top accent line (quiz element) -->
+  <line x1="70" y1="35" x2="130" y2="35" stroke="#10b981" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- Accent dots -->
+  <circle cx="75" cy="50" r="3" fill="#10b981"/>
+  <circle cx="100" cy="50" r="3" fill="#10b981"/>
+  <circle cx="125" cy="50" r="3" fill="#10b981"/>
+</svg>

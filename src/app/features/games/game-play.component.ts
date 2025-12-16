@@ -93,7 +93,18 @@ interface GroupedQuestion {
            <!-- Question Answer Mode -->
            @if (selectedQuestionId() && (isMyTurn(g) || isAdmin())) {
               @if (currentQuestion(); as q) {
-                <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden">
+                                <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden relative">
+                                        <div [hidden]="!showCorrectEffect()" class="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                                            <!-- Simple check animation -->
+                                            <svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-xl">
+                                                <g transform="translate(80 80) scale(0)" id="checkGroup">
+                                                    <circle cx="0" cy="0" r="60" fill="#10b981" opacity="0.95"></circle>
+                                                    <path d="M-24 6 L-6 24 L28 -18" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"></path>
+                                                    <animateTransform attributeName="transform" type="scale" from="0" to="1" dur="0.32s" fill="freeze" />
+                                                    <animateTransform attributeName="transform" type="scale" from="1" to="0" begin="0.9s" dur="0.28s" fill="freeze" additive="sum" />
+                                                </g>
+                                            </svg>
+                                        </div>
                    <div class="relative h-64 sm:h-80 overflow-hidden" [style.backgroundImage]="'url(' + getTopicImageUrl(q.topicId) + ')'" [style.backgroundSize]="'cover'" [style.backgroundPosition]="'center'">
                        <!-- <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
                            Question {{ g.playerAnswers.length + 1 }}
@@ -178,6 +189,10 @@ export class GamePlayComponent implements OnInit, OnDestroy {
 
     selectedQuestionId = signal<string | null>(null);
     currentQuestion = signal<Question | null>(null);
+
+    // Visual effect when an answer is correct
+    showCorrectEffect = signal(false);
+    effectTimeout: any = null;
 
     isAdmin = computed(() => this.authService.currentUser()?.role === 'admin');
 
@@ -309,9 +324,20 @@ export class GamePlayComponent implements OnInit, OnDestroy {
     async submitAnswer(g: Game, qId: string, aIndex: number) {
         if (!this.isMyTurn(g)) return;
         try {
+            // Determine correctness locally and trigger effect immediately
+            const cq = this.currentQuestion();
+            const answeredCorrectly = !!cq && !!cq.answers && cq.answers[aIndex] && cq.answers[aIndex].correct;
+            if (answeredCorrectly) {
+                this.showCorrectEffect.set(true);
+                if (this.effectTimeout) clearTimeout(this.effectTimeout);
+                this.effectTimeout = setTimeout(() => this.showCorrectEffect.set(false), 1200);
+            }
+
             await this.gameService.submitAnswer(g.id, g, qId, aIndex);
+
             // Reset selection after answering
             this.selectedQuestionId.set(null);
+
             if (this.isMyTurn(g)) {
                 await this.gameService.updateGame(g.id, {
                     currentSelectedQuestionId: null
