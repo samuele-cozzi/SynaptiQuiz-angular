@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, collectionData, doc, addDoc, updateDoc, deleteDoc, query, where } from '@angular/fire/firestore';
+import { Firestore, collection, collectionData, doc, addDoc, updateDoc, deleteDoc, query, where, writeBatch } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 import { Question } from '../models/question.model';
 
@@ -35,5 +35,15 @@ export class QuestionService {
     async deleteQuestion(id: string) {
         const docRef = doc(this.firestore, 'questions', id);
         return deleteDoc(docRef);
+    }
+
+    async deleteQuestions(ids: string[]) {
+        if (!ids || ids.length === 0) return;
+        const batch = writeBatch(this.firestore);
+        for (const id of ids) {
+            const ref = doc(this.firestore, 'questions', id);
+            batch.delete(ref);
+        }
+        return batch.commit();
     }
 }

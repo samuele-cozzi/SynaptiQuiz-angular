@@ -21,12 +21,15 @@ import { Topic } from '../../core/models/topic.model';
             Manage your quiz questions.
           </p>
         </div>
-        <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex gap-2">
+        <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex gap-2 items-center">
           <button routerLink="/questions/generate" type="button" class="inline-flex items-center justify-center rounded-md border border-transparent bg-purple-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 sm:w-auto">
             Generate with AI
           </button>
           <button (click)="openModal()" type="button" class="inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:w-auto">
             {{ 'COMMON.CREATE' | translate }}
+          </button>
+          <button (click)="deleteSelected()" type="button" [disabled]="selectedIds().length === 0" class="inline-flex items-center justify-center rounded-md border border-transparent bg-red-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:w-auto disabled:opacity-50 ml-2">
+            Delete selected ({{ selectedIds().length }})
           </button>
         </div>
       </div>
@@ -75,6 +78,9 @@ import { Topic } from '../../core/models/topic.model';
               <table class="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
                 <thead class="bg-gray-50 dark:bg-gray-800">
                   <tr>
+                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-200">
+                      <input type="checkbox" [checked]="isAllSelected()" (change)="toggleSelectAll($event.target.checked)" class="h-4 w-4" aria-label="Select all" />
+                    </th>
                     <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-200">Text</th>
                      <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-200">Topic</th>
                      <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-200">Diff</th>
@@ -87,6 +93,9 @@ import { Topic } from '../../core/models/topic.model';
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
                   @for (q of filteredQuestions(); track q.id) {
                       <tr>
+                        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-900 dark:text-white">
+                          <input type="checkbox" [checked]="isSelected(q.id)" (change)="toggleSelection(q.id, $event.target.checked)" class="h-4 w-4" aria-label="Select question" />
+                        </td>
                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-900 dark:text-white max-w-xs truncate">{{ q.text }}</td>
                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ getTopicName(q.topicId) }}</td>
                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ q.difficulty }}</td>
@@ -205,6 +214,7 @@ export class QuestionsListComponent {
 
   questions = signal<Question[]>([]);
   topics = signal<Topic[]>([]);
+  selectedIds = signal<string[]>([]);
 
   filters = {
     text: '',
@@ -228,6 +238,49 @@ export class QuestionsListComponent {
     const storedLang = localStorage.getItem('language');
     if (storedLang === 'en' || storedLang === 'it') {
       // We will set this when opening modal
+    }
+  }
+
+  isSelected(id: string) {
+    return this.selectedIds().includes(id);
+  }
+
+  toggleSelection(id: string, checked: boolean) {
+    const current = new Set(this.selectedIds());
+    if (checked) current.add(id); else current.delete(id);
+    this.selectedIds.set(Array.from(current));
+  }
+
+  isAllSelected() {
+    const filtered = this.filteredQuestions();
+    if (filtered.length === 0) return false;
+    return filtered.every(q => this.selectedIds().includes(q.id));
+  }
+
+  toggleSelectAll(checked: boolean) {
+    if (!checked) {
+      // Unselect all filtered
+      const remaining = this.selectedIds().filter(id => !this.filteredQuestions().some(q => q.id === id));
+      this.selectedIds.set(remaining);
+      return;
+    }
+    const ids = this.filteredQuestions().map(q => q.id);
+    // Merge keeping any previously selected outside of filtered
+    const merged = Array.from(new Set([...(this.selectedIds() || []), ...ids]));
+    this.selectedIds.set(merged);
+  }
+
+  async deleteSelected() {
+    const ids = this.selectedIds();
+    if (!ids || ids.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${ids.length} question(s)?`)) return;
+    try {
+      await this.questionService.deleteQuestions(ids);
+      // Clear selection
+      this.selectedIds.set([]);
+    } catch (e) {
+      alert('Failed to delete selected questions');
+      console.error(e);
     }
   }
 
