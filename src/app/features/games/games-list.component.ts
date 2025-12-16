@@ -63,72 +63,92 @@ import { FormsModule } from '@angular/forms';
         </div>
       </div>
 
-      <!-- Games List -->
-      <div class="mt-8 grid gap-5 max-w-lg mx-auto lg:grid-cols-3 lg:max-w-none">
-        @for (game of filteredGames(); track game.id) {
-        <div class="flex flex-col rounded-lg shadow-lg overflow-hidden bg-white dark:bg-gray-800">
-          <div class="flex-1 p-6 flex flex-col justify-between">
-            <div class="flex-1">
-              <p class="text-sm font-medium text-indigo-600">
-                {{ game.language | uppercase }}
-              </p>
-              <div class="block mt-2">
-                <p class="text-xl font-semibold text-gray-900 dark:text-white">{{ game.name }}</p>
-                <p class="mt-3 text-base text-gray-500 dark:text-gray-400">
-                  Players: {{ game.players.length }} | Questions: {{ game.questions.length }}
-                </p>
-              </div>
-            </div>
-            <div class="mt-6 flex items-center">
-              <div class="flex-shrink-0">
-                <span
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                  [class.bg-yellow-100]="game.status === 'waiting'"
-                  [class.text-yellow-800]="game.status === 'waiting'"
-                  [class.bg-green-100]="game.status === 'in_progress'"
-                  [class.text-green-800]="game.status === 'in_progress'"
-                  [class.bg-gray-100]="game.status === 'completed'"
-                  [class.text-gray-800]="game.status === 'completed'"
-                >
-                  {{ game.status | uppercase }}
-                </span>
-              </div>
-              <div class="ml-auto">
-                @if (canView(game)) {
-                <button
-                  (click)="viewGame(game.id)"
-                  class="text-indigo-600 hover:text-indigo-900 font-medium mr-2"
-                >
-                  View
-                </button>
-                } @if (canPlay(game)) {
-                <button
-                  (click)="play(game.id)"
-                  class="text-indigo-600 hover:text-indigo-900 font-medium mr-2"
-                >
-                  Play
-                </button>
-                } @if (canManage(game)) {
-                <button
-                  (click)="duplicate(game)"
-                  class="text-gray-600 hover:text-gray-900 font-medium mr-2"
-                >
-                  Duplicate
-                </button>
-                <button
-                  (click)="deleteGame(game.id)"
-                  class="text-red-600 hover:text-red-900 font-medium"
-                >
-                  Delete
-                </button>
-                }
-              </div>
-            </div>
-          </div>
+      <!-- Games List (rows) -->
+      <div class="mt-8">
+        <div class="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50 dark:bg-gray-900">
+              <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Language</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Players</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Questions</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200">
+              @for (game of filteredGames(); track game.id) {
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <div class="ml-0">
+                      <div class="text-sm font-medium text-gray-900 dark:text-white">{{ game.name }}</div>
+                      <div class="text-xs text-gray-500 dark:text-gray-400">ID: {{ game.id }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{{ game.language | uppercase }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{{ game.players.length }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{{ game.questions.length }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                    [class.bg-yellow-100]="game.status === 'waiting'"
+                    [class.text-yellow-800]="game.status === 'waiting'"
+                    [class.bg-green-100]="game.status === 'in_progress'"
+                    [class.text-green-800]="game.status === 'in_progress'"
+                    [class.bg-gray-100]="game.status === 'completed'"
+                    [class.text-gray-800]="game.status === 'completed'"
+                  >
+                    {{ game.status | uppercase }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  @if (canView(game)) {
+                  <button (click)="viewGame(game.id)" aria-label="View" title="View" class="text-indigo-600 hover:text-indigo-900 font-medium mr-3">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    <span class="sr-only">View</span>
+                  </button>
+                  }
+                  @if (canPlay(game)) {
+                  <button (click)="play(game.id)" aria-label="Play" title="Play" class="text-indigo-600 hover:text-indigo-900 font-medium mr-3">
+                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M4.5 3.5v13l11-6.5-11-6.5z" />
+                    </svg>
+                    <span class="sr-only">Play</span>
+                  </button>
+                  }
+                  @if (canManage(game)) {
+                  <button (click)="duplicate(game)" aria-label="Duplicate" title="Duplicate" class="text-gray-600 hover:text-gray-900 font-medium mr-3">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="9" y="9" width="10" height="10" rx="2" ry="2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></rect>
+                      <rect x="4" y="4" width="10" height="10" rx="2" ry="2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></rect>
+                    </svg>
+                    <span class="sr-only">Duplicate</span>
+                  </button>
+                  <button (click)="deleteGame(game.id)" aria-label="Delete" title="Delete" class="text-red-600 hover:text-red-900 font-medium">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-1 12a2 2 0 01-2 2H8a2 2 0 01-2-2L5 7" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 11v6M14 11v6" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7V4h6v3" />
+                    </svg>
+                    <span class="sr-only">Delete</span>
+                  </button>
+                  }
+                </td>
+              </tr>
+              } @empty {
+              <tr>
+                <td class="px-6 py-4 text-center text-gray-500" colspan="6">No games found. Create one!</td>
+              </tr>
+              }
+            </tbody>
+          </table>
         </div>
-        } @empty {
-        <div class="col-span-3 text-center text-gray-500">No games found. Create one!</div>
-        }
       </div>
     </div>
   `,

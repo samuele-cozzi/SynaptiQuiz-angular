@@ -92,11 +92,19 @@ import { Topic } from '../../core/models/topic.model';
                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ q.difficulty }}</td>
                         <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ q.language }}</td>
                         <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                          <button (click)="openModal(q)" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-4">
-                              {{ 'COMMON.EDIT' | translate }}
+                          <button (click)="openModal(q)" aria-label="Edit" title="Edit" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-4">
+                              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5h6M5 12l7-7 7 7v6a2 2 0 01-2 2h-4l-8-8z" />
+                              </svg>
+                              <span class="sr-only">Edit</span>
                           </button>
-                           <button (click)="deleteQuestion(q.id)" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
-                              {{ 'COMMON.DELETE' | translate }}
+                           <button (click)="deleteQuestion(q.id)" aria-label="Delete" title="Delete" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
+                              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-1 12a2 2 0 01-2 2H8a2 2 0 01-2-2L5 7" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 11v6M14 11v6" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7V4h6v3" />
+                              </svg>
+                              <span class="sr-only">Delete</span>
                           </button>
                         </td>
                       </tr>

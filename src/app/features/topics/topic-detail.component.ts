@@ -88,9 +88,12 @@ import { Question } from '../../core/models/question.model';
 
                     <!-- Actions -->
                     <div class="ml-4 flex-shrink-0">
-                      <button type="button" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
-                        {{ 'COMMON.EDIT' | translate }}
-                      </button>
+                      <button type="button" aria-label="Edit Question" title="Edit Question" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
+                          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5h6M5 12l7-7 7 7v6a2 2 0 01-2 2h-4l-8-8z" />
+                          </svg>
+                          <span class="sr-only">Edit</span>
+                        </button>
                     </div>
                   </div>
                 </div>
