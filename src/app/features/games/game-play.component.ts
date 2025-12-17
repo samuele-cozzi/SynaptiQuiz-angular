@@ -22,6 +22,11 @@ interface GroupedQuestion {
   imports: [CommonModule, TranslateModule],
   template: `
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      @if (showWrongEmoji()) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div class="text-8xl animate-bounce select-none">😢</div>
+        </div>
+      }
       @if (game(); as g) {
 
       <!-- Header with Topic Background Image -->
@@ -105,40 +110,7 @@ interface GroupedQuestion {
         <!-- @if (selectedQuestionId() && (isMyTurn(g) || isAdmin())) { -->
         @if ((isMyTurn(g) || isAdmin()) && g.currentQuestion; as q) {
         <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden relative">
-          <div
-            [class.hidden]="!showCorrectEffect()"
-            class="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
-          >
-            <!-- Simple check animation -->
-            <svg
-              width="160"
-              height="160"
-              viewBox="0 0 160 160"
-              xmlns="http://www.w3.org/2000/svg"
-              class="drop-shadow-xl"
-            >
-              <g transform="translate(80 80)">
-                <circle r="60" fill="#10b981" opacity="0.95" />
-                <path
-                  d="M-24 6 L-6 24 L28 -18"
-                  fill="none"
-                  stroke="#fff"
-                  stroke-width="8"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-
-                <animateTransform
-                  attributeName="transform"
-                  type="scale"
-                  values="0;1;0"
-                  keyTimes="0;0.5;1"
-                  dur="2s"
-                  repeatCount="indefinite"
-                />
-              </g>
-            </svg>
-          </div>
+          <!-- Confetti effect will be rendered programmatically on the whole page -->
           <div
             class="relative h-64 sm:h-80 overflow-hidden"
             [style.backgroundImage]="'url(' + getTopicImageUrl(q.topicId) + ')'"
@@ -282,6 +254,9 @@ export class GamePlayComponent implements OnInit, OnDestroy {
   gamePlayers = signal<any[]>([]);
   gameSub?: Subscription;
   topicsSub?: Subscription;
+  // Audio + UI state
+  private _audioCtx: AudioContext | null = null;
+  showWrongEmoji = signal(false);
 
   // selectedQuestionId = signal<string | null>(null);
   currentQuestion = signal<Question | null>(null);
@@ -353,6 +328,13 @@ export class GamePlayComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.gameSub?.unsubscribe();
     this.topicsSub?.unsubscribe();
+    // nothing to cleanup for canvas-confetti; stop any running audio context if present
+    try {
+      if (this._audioCtx) {
+        this._audioCtx.close();
+        this._audioCtx = null;
+      }
+    } catch (e) {}
   }
 
   async selectQuestion(questionId: string) {
@@ -462,8 +444,22 @@ export class GamePlayComponent implements OnInit, OnDestroy {
       const answeredCorrectly =
         !!cq && !!cq.answers && cq.answers[aIndex] && cq.answers[aIndex].correct;
       if (answeredCorrectly) {
-        this.showCorrectEffect.set(true);
-        if (this.effectTimeout) clearTimeout(this.effectTimeout);
+        // Play correct audio and trigger library confetti
+        this._playCorrectSound();
+        try {
+          // dynamic import - ignore typecheck in case package isn't installed in build env
+          // @ts-ignore
+          const _confMod = await import('canvas-confetti');
+          const conf = (_confMod && (_confMod.default || _confMod)) as any;
+          conf({ particleCount: 120, spread: 90, origin: { y: 0.6 } });
+          conf({ particleCount: 60, spread: 120, origin: { y: 0.4 } });
+        } catch (e) {
+          console.warn('confetti failed', e);
+        }
+      } else {
+        // Wrong answer: show sad emoji and play a short 'wrong' sound
+        this.showWrongEmoji.set(true);
+        this._playWrongSound();
       }
 
       this.effectTimeout = setTimeout(() => {
@@ -471,10 +467,55 @@ export class GamePlayComponent implements OnInit, OnDestroy {
         this.gameService.submitAnswer(g.id, g, qId, aIndex);
         // Reset any 50/50 after answering
         this.hiddenAnswerIndexes.set([]);
-      }, 5000);
+        // hide wrong emoji if visible
+        this.showWrongEmoji.set(false);
+      }, 1800);
     } catch (e) {
       alert(e);
     }
+  }
+
+  private _ensureAudioCtx() {
+    if (!this._audioCtx) {
+      try {
+        this._audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      } catch (e) {
+        this._audioCtx = null;
+      }
+    }
+    return this._audioCtx;
+  }
+
+  private _playCorrectSound() {
+    const ctx = this._ensureAudioCtx();
+    if (!ctx) return;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(880, ctx.currentTime);
+    g.gain.setValueAtTime(0.001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.5, ctx.currentTime + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start();
+    o.stop(ctx.currentTime + 2);
+  }
+
+  private _playWrongSound() {
+    const ctx = this._ensureAudioCtx();
+    if (!ctx) return;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(220, ctx.currentTime);
+    g.gain.setValueAtTime(0.001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start();
+    o.stop(ctx.currentTime + 2);
   }
 
   viewLeaderboard() {
