@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { AuthService } from '../../services/auth.service';
+import { VersionService } from '../../services/version.service';
 
 @Component({
   selector: 'app-layout',
@@ -89,6 +90,7 @@ import { AuthService } from '../../services/auth.service';
                     <p class="text-sm font-medium text-gray-900 dark:text-white group-hover:text-gray-700 dark:group-hover:text-gray-300">
                       {{ 'COMMON.LOGOUT' | translate }}
                     </p>
+                    <p class="text-xs text-gray-500 dark:text-gray-300 mt-1">{{ getVersionLabel() }}</p>
                   </div>
                 </div>
               </a>
@@ -216,6 +218,7 @@ import { AuthService } from '../../services/auth.service';
 })
 export class LayoutComponent {
   authService = inject(AuthService);
+  versionService = inject(VersionService);
   mobileMenuOpen = signal(false);
 
   toggleMobileMenu() {
@@ -225,5 +228,10 @@ export class LayoutComponent {
   logout(event: Event) {
     event.preventDefault();
     this.authService.logout();
+  }
+
+  getVersionLabel() {
+    const v = this.versionService.getVersion();
+    return v === 'dev' ? 'dev' : `v${v}`;
   }
 }
