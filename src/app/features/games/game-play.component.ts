@@ -106,7 +106,7 @@ interface GroupedQuestion {
         @if ((isMyTurn(g) || isAdmin()) && g.currentQuestion; as q) {
         <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg overflow-hidden relative">
           <div
-            [hidden]="!showCorrectEffect()"
+            [class.hidden]="!showCorrectEffect()"
             class="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
           >
             <!-- Simple check animation -->
@@ -171,13 +171,13 @@ interface GroupedQuestion {
               >
                 50/50 ({{ getMyGamePlayer(g)?.fiftyFifty || 0 }})
               </button>
-              <button
+              <!-- <button
                 (click)="useSwitch(g)"
                 [disabled]="(getMyGamePlayer(g)?.switches || 0) <= 0"
                 class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm bg-white dark:bg-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
                 Switch ({{ getMyGamePlayer(g)?.switches || 0 }})
-              </button>
+              </button> -->
             </div>
             }
 
@@ -464,9 +464,9 @@ export class GamePlayComponent implements OnInit, OnDestroy {
       if (answeredCorrectly) {
         this.showCorrectEffect.set(true);
         if (this.effectTimeout) clearTimeout(this.effectTimeout);
-        this.effectTimeout = setTimeout(() => this.showCorrectEffect.set(false), 1200);
       }
 
+      this.effectTimeout = setTimeout(() => this.showCorrectEffect.set(false), 5000);
       await this.gameService.submitAnswer(g.id, g, qId, aIndex);
       // Reset any 50/50 after answering
       this.hiddenAnswerIndexes.set([]);
