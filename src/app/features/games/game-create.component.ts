@@ -323,6 +323,7 @@ export class GameCreateComponent implements OnInit {
   questionTopicId = '';
 
   isDuplicate = false;
+  duplicateGame: Game | null = null;
 
   constructor() {
     // Retrieve data
@@ -332,16 +333,22 @@ export class GameCreateComponent implements OnInit {
   }
 
   fetchQuestions() {
-    this.questionService.getQuestionsByLanguage(this.gameData.language).subscribe((q) => {
-      this.allQuestions.set(q);
+    // Normalize language value to avoid mismatches (e.g., 'IT', 'it ')
+    const lang = (this.gameData.language as string).trim().toLowerCase() as 'en' | 'it';
+    this.questionService.getQuestionsByLanguage(lang).subscribe((q) => {
+      // If backend query returned empty results for this language, and we're duplicating,
+      // fall back to the duplicated game's questions (if any). This covers cases where
+      // questions were stored with a different language tag or are missing indices.
+      const results = (q && q.length > 0) ? q : (this.isDuplicate && this.duplicateGame?.questions?.length ? this.duplicateGame!.questions : []);
+
+      this.allQuestions.set(results);
+
       // If we had selected questions from a different language, they are invalid now (or we clear them).
       // For simplicity, we clear selection on language change unless it matches duplication logic.
       if (!this.isDuplicate) {
         this.selectedQuestions.set([]);
       } else {
         // If duplicating, we try to preserve selected questions if they exist in new list
-        // But actually duplicate usually copies same language.
-        // If user changes language while duplicating, questions become invalid.
         const currentIds = this.allQuestions().map((q) => q.id);
         const validSelected = this.selectedQuestions().filter((sq) => currentIds.includes(sq.id));
         this.selectedQuestions.set(validSelected);
@@ -355,10 +362,17 @@ export class GameCreateComponent implements OnInit {
     if (state && state.duplicateGame) {
       const g = state.duplicateGame;
       this.isDuplicate = true;
+      this.duplicateGame = g;
       this.gameData.name = g.name + ' (Copy)';
       this.gameData.language = g.language;
 
-      this.fetchQuestions(); // Refresh questions for this language
+      // Refresh questions for this language and try to preserve selected questions
+      this.fetchQuestions();
+
+      // Preselect questions from the duplicated game (if they exist)
+      if (g.questions && g.questions.length) {
+        this.selectedQuestions.set(g.questions);
+      }
 
       // Preselect users: "the logged user will be preselected in the list of users."
       // So we discard original players? Or keep them + logged user?
@@ -384,10 +398,31 @@ export class GameCreateComponent implements OnInit {
         // Wait for Players logic:
         this.playerService.getPlayers().subscribe((players) => {
           this.allPlayers.set(players);
-          const me = players.find((p) => p.uid === currentUser.uid);
-          if (me) {
-            this.selectedPlayers.set([me]);
+
+          // Try to preselect the same players as the duplicated game (preserve order)
+          const mappedPlayers = g.players
+            .map((gp) => players.find((p) => p.uid === gp.uid) || gp)
+            .filter(Boolean);
+
+          if (mappedPlayers.length) {
+            this.selectedPlayers.set(mappedPlayers as Player[]);
+          } else {
+            // Fallback: if original players not available, select the current user only
+            const me = players.find((p) => p.uid === currentUser.uid);
+            if (me) this.selectedPlayers.set([me]);
           }
+
+          // If all duplicated players share the same helper counts, prefill the helper inputs
+          const helpers = ['externalHelps', 'fiftyFifty', 'switches'] as const;
+          helpers.forEach((h) => {
+            const values = g.players.map((p) => (p as any)[h] ?? null);
+            const allEqual = values.every((v) => v === values[0]);
+            if (allEqual && values[0] != null) {
+              if (h === 'externalHelps') this.gameData.externalHelpsPerPlayer = values[0];
+              if (h === 'fiftyFifty') this.gameData.fiftyFiftyPerPlayer = values[0];
+              if (h === 'switches') this.gameData.switchesPerPlayer = values[0];
+            }
+          });
         });
       }
     }
