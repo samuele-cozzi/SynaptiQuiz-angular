@@ -466,10 +466,12 @@ export class GamePlayComponent implements OnInit, OnDestroy {
         if (this.effectTimeout) clearTimeout(this.effectTimeout);
       }
 
-      this.effectTimeout = setTimeout(() => this.showCorrectEffect.set(false), 5000);
-      await this.gameService.submitAnswer(g.id, g, qId, aIndex);
-      // Reset any 50/50 after answering
-      this.hiddenAnswerIndexes.set([]);
+      this.effectTimeout = setTimeout(() => {
+        this.showCorrectEffect.set(false);
+        this.gameService.submitAnswer(g.id, g, qId, aIndex);
+        // Reset any 50/50 after answering
+        this.hiddenAnswerIndexes.set([]);
+      }, 5000);
     } catch (e) {
       alert(e);
     }
