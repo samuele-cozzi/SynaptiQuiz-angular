@@ -44,7 +44,7 @@ export class AiService {
         ]
       }
       
-      Ensure exactly one answer is correct per question.
+      Ensure exactly one answer is correct per question, and the answers are randomly ordered.
       Do not include markdown formatting (like \`\`\`json). Just the raw JSON.
     `;
 
